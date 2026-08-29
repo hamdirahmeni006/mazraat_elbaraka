@@ -1,0 +1,24 @@
+{
+  "name": "مزرعة البركة — الإدارة",
+  "short_name": "مزرعة البركة",
+  "description": "إدارة المخزون، الصندوق، المزودين، الحرفاء والفواتير — دواجن ومشتقات.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B5A2A",
+  "theme_color": "#0B5A2A",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "productivity", "finance"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "بيع سريع", "short_name": "بيع", "url": "./index.html#p-pos", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "المخزون", "short_name": "مخزون", "url": "./index.html#p-stock", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "الصندوق", "short_name": "صندوق", "url": "./index.html#p-cash", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
