@@ -493,7 +493,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "2.3.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "2.4.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -504,6 +504,8 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&l
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[\s\u066C\u00A0]/g, "").replace(/[,\u066B]/, ".")); return isNaN(n) ? 0 : n; };
 
 const I18N = {
+"لوج على سلعة أو باركود":"ابحث عن مادة أو باركود|Rechercher un article ou un code",
+"زيد بالباركود":"أضف بالباركود|Ajouter par code-barres",
 "التموين":"|À commander",
 "الكود مستعمل في":"الكود مستعمَل في|Code déjà utilisé par",
 "الكود :":"|Code :",
@@ -2959,6 +2961,41 @@ RENDER["p-doc"] = () => {
 ACT["doc-new-f"] = () => docForm("facture");
 ACT["doc-new-d"] = () => docForm("devis");
 
+/* sélecteur de produit : recherche par nom, code-barres ou catégorie, + lecture caméra */
+function pickProduct(cb){
+  if(!S.products.length) return toast("المخزون فارغ");
+  let q = "";
+  const rows = () => S.products.filter(p => hit(p, q.trim().toLowerCase())).map(p => `
+    <div class="item tap" data-pick="${p.id}">
+      <div class="av">${p.img ? `<img class="pimg" src="${esc(p.img)}" alt="">` : catIc(p.cat)}</div>
+      <div class="bd"><div class="nm">${esc(pn(p))}</div>
+        <div class="mt">${money(p.price)} د.ت${p.code ? " · " + esc(p.code) : ""}</div></div>
+      <div class="rt"><div class="mt">${qtyF(p.qty || 0)} ${esc(p.unit || "")}</div></div>
+    </div>`).join("") || `<div class="empty"><div class="ic">📦</div>ما فماش سلعة بهذا الاسم</div>`;
+  sheet("اختار سلعة", `
+    <div class="search"><span class="si">${ic("search",17)}</span>
+      <input id="pk-q" placeholder="لوج على سلعة أو باركود…"></div>
+    ${canScan() ? `<button class="btn line block sm" id="pk-scan" style="margin-top:9px">📷 قراءة الباركود</button>` : ""}
+    <div class="list" id="pk-list" style="max-height:50vh;overflow:auto;margin-top:10px">${rows()}</div>
+    <div class="foot"><button class="btn line" data-act="close">إلغاء</button></div>`,
+  () => {
+    const paint = () => { const l = $("#pk-list"); if(l){ l.innerHTML = rows(); localize(l); } };
+    $("#pk-q").oninput = e => { q = e.target.value; paint(); };
+    const sc = $("#pk-scan");
+    if(sc) sc.onclick = () => scanCode(code => {
+      const p = S.products.find(x => (x.code || "").trim() === code);
+      if(p){ closeSheet(); return cb(p); }
+      q = code; const i = $("#pk-q"); if(i) i.value = code; paint();
+      toast("ما فماش سلعة بهذا الاسم");
+    });
+    $("#pk-list").onclick = e => {
+      const b = e.target.closest("[data-pick]"); if(!b) return;
+      const p = prod(b.dataset.pick); if(!p) return;
+      closeSheet(); cb(p);
+    };
+  });
+}
+
 function docForm(type, existing, keep){
   if(!keep) DOC = existing ? JSON.parse(JSON.stringify(existing)) : {
     type, no: nextNo(S.docs.filter(d => d.type === type)), date: todayKey(),
@@ -2986,6 +3023,7 @@ function docForm(type, existing, keep){
       <button class="btn line sm" id="d-addp">${ic("box",15)} زيد من المخزون</button>
       <button class="btn line sm" id="d-addf">${ic("plus",15)} سطر حر</button>
     </div>
+    ${canScan() ? `<button class="btn line block sm" id="d-scan" style="margin-top:8px">📷 زيد بالباركود</button>` : ""}
     <div class="grid3" style="margin-top:12px">
       <div class="field"><label>تخفيض %</label><input id="d-rem" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.remise}"></div>
       <div class="field"><label>الأداء %</label><input id="d-tva" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.tva}"></div>
@@ -3048,18 +3086,21 @@ function docForm(type, existing, keep){
       if(c){ $("#d-cname").value = c.name; $("#d-caddr").value = c.addr || ""; $("#d-cmf").value = c.mf || ""; }
     };
     $("#d-addf").onclick = () => { DOC.items.push({ d:"", qty:1, pu:0 }); drawL(); };
-    $("#d-addp").onclick = () => {
-      if(!S.products.length) return toast("المخزون فارغ");
-      sheet("اختار سلعة", `<div class="list" style="max-height:56vh;overflow:auto">${S.products.map(p => `
-        <div class="item tap" data-pick="${p.id}"><div class="av">${catIc(p.cat)}</div>
-          <div class="bd"><div class="nm">${esc(pn(p))}</div><div class="mt">${money(p.price)} د.ت</div></div></div>`).join("")}</div>`,
-        () => $("#sheet-body").onclick = e => {
-          const b = e.target.closest("[data-pick]"); if(!b) return;
-          const p = prod(b.dataset.pick);
-          DOC.items.push({ d:pn(p), qty:1, pu:p.price || 0 });
-          closeSheet(); docForm(DOC.type, DOC);
-        });
+    const addProd = p => {                       /* une ligne par produit : on cumule */
+      const ex = DOC.items.find(i => i.pid === p.id);
+      if(ex) ex.qty = Math.round(((ex.qty || 0) + 1) * 1000) / 1000;
+      else DOC.items.push({ d:pn(p), pid:p.id, qty:1, pu:p.price || 0 });
     };
+    $("#d-addp").onclick = () => {
+      snap();                                    /* la saisie en cours est conservée */
+      pickProduct(p => { addProd(p); docForm(type, existing, true); });
+    };
+    const dsc = $("#d-scan");
+    if(dsc) dsc.onclick = () => scanCode(code => {
+      const p = S.products.find(x => (x.code || "").trim() === code);
+      if(!p) return toast("ما فماش سلعة بهذا الاسم");
+      addProd(p); drawL(); toast(pn(p) + " ✓");
+    });
     $("#d-lines").addEventListener("input", e => {
       const t = e.target.closest("[data-dl]"); if(!t) return;
       const i = +t.dataset.i;
