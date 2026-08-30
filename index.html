@@ -305,9 +305,14 @@ nav button.on svg{stroke-width:2.4}
 .qbig button:active{background:var(--g100)}
 .qbig input{flex:1;min-width:0;background:transparent;border:none;text-align:center;
   font-size:23px;font-weight:800;color:var(--ink);padding:0}
-.scanbox{position:relative;width:100%;height:230px;border-radius:16px;overflow:hidden;background:#000}
-.scanbox video{width:100%;height:100%;object-fit:cover}
-.scanline{position:absolute;left:8%;right:8%;top:50%;height:2px;background:var(--gold);box-shadow:0 0 12px var(--gold)}
+.scan{position:fixed;inset:0;z-index:200;background:#000;display:grid;grid-template-rows:1fr auto}
+.scan .vid{position:relative;overflow:hidden}
+.scan video{width:100%;height:100%;object-fit:cover;display:block}
+.scanline{position:absolute;left:8%;right:8%;top:50%;height:2px;background:var(--gold);box-shadow:0 0 14px var(--gold)}
+.scan .bar{padding:16px 16px calc(16px + var(--safe-b));background:rgba(0,0,0,.78);
+  display:grid;gap:11px;justify-items:center}
+.scan .bar .t{color:#fff;font-size:13.5px;text-align:center}
+.scan .bar .btn{background:#fff;min-width:180px}
 .imgbox{width:100%;height:150px;border-radius:16px;border:1.5px dashed var(--line);
   background:var(--surface-2);display:grid;place-items:center;overflow:hidden;position:relative}
 .imgbox img{width:100%;height:100%;object-fit:cover}
@@ -453,6 +458,12 @@ nav button.on svg{stroke-width:2.4}
 <div id="toast"></div>
 <div id="print"></div>
 
+<div id="scan" class="scan hidden">
+  <div class="vid"><video id="sc-v" playsinline muted></video><div class="scanline"></div></div>
+  <div class="bar"><div class="t">وجّه الكاميرا على الباركود.</div>
+    <button class="btn line" id="sc-x">إلغاء</button></div>
+</div>
+
 <script>try{if(localStorage.getItem("mb-lang")==="fr"){var h=document.documentElement;h.lang="fr";h.dir="ltr";
 document.title="Mazraat El Baraka — Gestion";}}catch(e){}</script>
 
@@ -471,7 +482,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "2.1.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "2.2.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -482,6 +493,8 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&l
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[\s\u066C\u00A0]/g, "").replace(/[,\u066B]/, ".")); return isNaN(n) ? 0 : n; };
 
 const I18N = {
+"الكود مستعمل في":"الكود مستعمَل في|Code déjà utilisé par",
+"الكود :":"|Code :",
 "قائمة التموين":"|Liste de réapprovisionnement",
 "سجل حركات المخزون":"سجلّ حركات المخزون|Journal des mouvements de stock",
 "حساب على":"محسوب على|Calculé sur",
@@ -1219,6 +1232,7 @@ function closeSheet(){
 }
 /* bouton « retour » du téléphone : ferme la feuille, sinon revient à la page précédente */
 addEventListener("popstate", e => {
+  if(SCAN_SHUT){ SCAN_SHUT(); try{ history.pushState({ page:S.page }, "", "#" + S.page); }catch(_){} return; }
   if(SHEET_H && $("#sheet").classList.contains("on")){       /* retour = fermer la feuille */
     closeSheet();
     try{ history.pushState({ page:S.page }, "", "#" + S.page); }catch(_){}
@@ -1913,33 +1927,34 @@ ACT["stk-cat"] = c => { STK.cat = c; render("p-stock"); };
 /* ---- photo produit : redimensionnée avant enregistrement ---- */
 /* ---- lecture de code-barres via l'appareil photo ---- */
 const canScan = () => !!(window.BarcodeDetector && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-function scanCode(cb){
+let SCAN_SHUT = null;
+async function scanCode(cb){
   if(!canScan()) return toast("غير متوفر على هذا الجهاز");
+  const box = $("#scan"), v = $("#sc-v");
   let stream = null, stop = false;
-  sheet("قراءة الباركود", `
-    <div class="scanbox"><video id="sc-v" playsinline muted></video><div class="scanline"></div></div>
-    <div class="hint">وجّه الكاميرا على الباركود.</div>
-    <div class="foot"><button class="btn line" data-act="close">إلغاء</button></div>`,
-  async () => {
-    const v = $("#sc-v");
-    const shut = () => { stop = true; if(stream) stream.getTracks().forEach(t => t.stop()); stream = null; };
-    const obs = new MutationObserver(() => { if(!document.body.contains(v)){ shut(); obs.disconnect(); } });
-    obs.observe(document.body, { childList:true, subtree:true });
+  const shut = () => {
+    stop = true; SCAN_SHUT = null;
+    if(stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+    v.srcObject = null; box.classList.add("hidden");
+  };
+  SCAN_SHUT = shut;
+  $("#sc-x").onclick = shut;
+  box.classList.remove("hidden");          /* couche séparée : la feuille ouverte reste intacte */
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
+    v.srcObject = stream; await v.play();
+  }catch(e){ shut(); return toast("ما تسمحتش بالكاميرا"); }
+  const det = new BarcodeDetector();
+  const loop = async () => {
+    if(stop) return;
     try{
-      stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
-      v.srcObject = stream; await v.play();
-    }catch(e){ shut(); closeSheet(); return toast("ما تسمحتش بالكاميرا"); }
-    const det = new BarcodeDetector();
-    const loop = async () => {
-      if(stop) return;
-      try{
-        const r = await det.detect(v);
-        if(r && r.length){ shut(); obs.disconnect(); closeSheet(); return cb(String(r[0].rawValue || "").trim()); }
-      }catch(e){}
-      requestAnimationFrame(loop);
-    };
+      const r = await det.detect(v);
+      const code = r && r.length ? String(r[0].rawValue || "").trim() : "";
+      if(code){ shut(); return cb(code); }
+    }catch(e){}
     requestAnimationFrame(loop);
-  });
+  };
+  requestAnimationFrame(loop);
 }
 ACT["scan-pos"] = () => scanCode(code => {
   const p = S.products.find(x => (x.code || "").trim() === code);
@@ -2032,7 +2047,13 @@ function prodForm(p, forceNew){
       cat:$("#f-cat").value, unit:$("#f-unit").value, cost:num($("#f-cost").value),
       price:num($("#f-price").value), qty:num($("#f-qty").value), min:num($("#f-min").value),
       dlc:$("#f-dlc").value, supplierId:$("#f-sup").value, code:$("#f-code").value });
-    $("#f-scan").onclick = () => scanCode(c => { const i = $("#f-code"); if(i) i.value = c; toast("تسجّل ✓"); });
+    $("#f-scan").onclick = () => scanCode(c => {
+      const i = $("#f-code");
+      if(!i) return toast("عاود المحاولة");
+      i.value = c;
+      const dup = S.products.find(x => x.id !== p.id && (x.code || "").trim() === c);
+      toast(dup ? "الكود مستعمل في " + pn(dup) : "الكود : " + c, 3000);
+    });
     $("#f-sup").onchange = e => {
       if(e.target.value !== "__new") return;
       e.target.value = p.supplierId || "";
