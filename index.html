@@ -192,9 +192,9 @@ nav button.on svg{stroke-width:2.4}
 /* ---------- feuille modale ---------- */
 .sheet{position:fixed;inset:0;z-index:100;display:none}
 .sheet.on{display:block}
-.sheet .bd{position:absolute;inset:0;background:rgba(6,40,20,.5);animation:fade .22s}
+#sheet > .bd{position:absolute;inset:0;z-index:0;background:rgba(6,40,20,.5);animation:fade .22s}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-.sheet .pnl{position:absolute;left:0;right:0;bottom:0;max-height:92dvh;background:var(--surface);
+.sheet .pnl{position:absolute;z-index:1;isolation:isolate;left:0;right:0;bottom:0;max-height:92dvh;background:var(--surface);
   border-radius:26px 26px 0 0;padding:8px 16px calc(20px + var(--safe-b));overflow-y:auto;
   animation:up .32s cubic-bezier(.2,.9,.2,1);box-shadow:var(--sh-lg)}
 @keyframes up{from{transform:translateY(100%)}to{transform:none}}
@@ -291,8 +291,8 @@ nav button.on svg{stroke-width:2.4}
   .kpi.hero{grid-column:span 2}
   .pos-grid{grid-template-columns:repeat(auto-fill,minmax(126px,1fr))}
   .sheet .pnl{max-width:580px;margin:0 auto;border-radius:26px;bottom:auto;top:50%;
-    transform:translateY(-50%);max-height:88dvh;padding:8px 22px 22px}
-  @keyframes up{from{opacity:0;transform:translateY(-46%)}to{opacity:1;transform:translateY(-50%)}}
+    transform:translateY(-50%);max-height:88dvh;padding:8px 22px 22px;animation-name:updesk}
+  @keyframes updesk{from{opacity:0;transform:translateY(-46%)}to{opacity:1;transform:translateY(-50%)}}
 }
 
 /* ---------- saisie tactile ---------- */
@@ -458,7 +458,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "1.3.0";           
+const APP_VERSION = "1.4.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -1131,24 +1131,25 @@ function sheet(title, body, onMount){
   localize($("#sheet-body"));
   $("#sheet").classList.add("on");
   document.body.style.overflow = "hidden";
-  if(!SHEET_H){ SHEET_H = true; try{ history.pushState({ page:S.page, sh:1 }, "", location.hash); }catch(e){} }
+  SHEET_H = true;
   onMount && onMount();
 }
 function closeSheet(){
   $("#sheet").classList.remove("on"); document.body.style.overflow = "";
-  if(SHEET_H){ SHEET_H = false;
-    try{ if(history.state && history.state.sh) history.back(); }catch(e){} }
+  SHEET_H = false;
 }
 /* bouton « retour » du téléphone : ferme la feuille, sinon revient à la page précédente */
 addEventListener("popstate", e => {
-  if($("#sheet").classList.contains("on")){
-    SHEET_H = false; $("#sheet").classList.remove("on"); document.body.style.overflow = ""; return;
+  if(SHEET_H && $("#sheet").classList.contains("on")){       /* retour = fermer la feuille */
+    closeSheet();
+    try{ history.pushState({ page:S.page }, "", "#" + S.page); }catch(_){}
+    return;
   }
   SHEET_H = false;
   const p = (e.state && e.state.page) || location.hash.replace("#", "") || "p-dash";
   if(p !== S.page && $("#" + p)) go(p, false);
 });
-$("#sheet .bd").addEventListener("click", closeSheet);
+$("#sheet > .bd").addEventListener("click", closeSheet);
 document.addEventListener("keydown", e => { if(e.key === "Escape") closeSheet(); });
 
 function ask(title, text, okLabel = "تأكيد", danger = false){
@@ -2847,7 +2848,8 @@ const catChips = (a, k) => (a || []).map((c, i) =>
 ).join("") || `<span class="hint">لا شيء</span>`;
 
 ACT["cat-add"] = async k => {
-  const inp = $("#add-" + k); const val = (inp?.value || "").trim();
+  const inp = document.getElementById("add-" + k); const val = (inp?.value || "").trim();
+  if(!inp || !Array.isArray(S.set[k])) return;
   if(!val) return toast("الاسم ضروري");
   const cur = (S.set[k] || []).slice();
   if(cur.includes(val)) return toast("هذا الصنف موجود");
