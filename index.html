@@ -464,7 +464,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "1.5.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "1.6.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -1615,15 +1615,12 @@ function askQty(p){
       السعر ${money(p.price)} د.ت / ${esc(p.unit)} — المتوفر ${qtyF(p.qty || 0)}</div>
     <div class="field"><label>الكمية (${esc(p.unit)})</label>
       ${padHTML("q-in", 1, /كغ|لتر|kg|L/i.test(p.unit || "") ? 0.5 : 1)}</div>
-    <div class="grid3" style="margin-bottom:6px">
-      ${[0.5,1,1.5,2,2.5,3].map(v => `<button class="btn line sm" data-q="${v}">${v}</button>`).join("")}</div>
-    <div class="tot-row big"><span>المجموع</span><span id="q-tot">${DT(p.price)}</span></div>
+    <div class="tot-row big" style="margin-top:12px"><span>المجموع</span><span id="q-tot">${DT(p.price)}</span></div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="q-ok">زيد للسلة</button></div>`,
   () => {
     const inp = $("#q-in");
     const upd8 = () => $("#q-tot").innerHTML = DT(num(inp.value) * (p.price || 0));
     inp.oninput = upd8;
-    $$("#sheet-body [data-q]").forEach(b => b.onclick = () => { inp.value = b.dataset.q; upd8(); });
     $("#q-ok").onclick = () => { const q = num(inp.value); if(q <= 0) return toast("الكمية لازم أكبر من 0"); closeSheet(); addToCart(p, q); };
     inp.onkeydown = e => e.key === "Enter" && $("#q-ok").click();
   });
