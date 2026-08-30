@@ -303,7 +303,7 @@ nav button.on svg{stroke-width:2.4}
   color:var(--g800);font-size:27px;font-weight:900;display:grid;place-items:center;box-shadow:var(--sh)}
 .qbig button:active{background:var(--g100)}
 .qbig input{flex:1;min-width:0;background:transparent;border:none;text-align:center;
-  font-size:25px;font-weight:900;color:var(--ink);padding:0}
+  font-size:23px;font-weight:800;color:var(--ink);padding:0}
 .imgbox{width:100%;height:150px;border-radius:16px;border:1.5px dashed var(--line);
   background:var(--surface-2);display:grid;place-items:center;overflow:hidden;position:relative}
 .imgbox img{width:100%;height:100%;object-fit:cover}
@@ -311,12 +311,6 @@ nav button.on svg{stroke-width:2.4}
 .pimg{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
 .pcard .ic .pimg{border-radius:12px}
 .item .av .pimg{border-radius:inherit}
-.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
-.keypad button{height:52px;border-radius:13px;background:var(--surface-2);border:1.5px solid var(--line);
-  font-size:21px;font-weight:800;color:var(--ink);display:grid;place-items:center}
-.keypad button:active{background:var(--g100);border-color:var(--g300)}
-.keypad button.del{color:var(--danger);font-size:18px}
-.keypad button.wide{grid-column:span 1}
 .chips-ed{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
 .ctag{display:inline-flex;align-items:center;gap:7px;background:var(--g100);color:var(--g800);
   border-radius:999px;padding:7px 11px;font-size:13px;font-weight:700}
@@ -473,7 +467,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "1.8.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "1.9.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -1619,30 +1613,19 @@ function addToCart(p, q){
 }
 /* ---- pavé numérique intégré : indépendant du clavier du téléphone ---- */
 function padHTML(id, val = "", step = 1){
-  const k = n => `<button type="button" data-pad="${id}" data-k="${n}">${n}</button>`;
   return `<div class="qbig">
       <button type="button" data-pad="${id}" data-k="-">−</button>
       <input id="${id}" type="text" inputmode="decimal" dir="ltr" autocomplete="off"
              data-step="${step}" value="${esc(String(val))}">
       <button type="button" data-pad="${id}" data-k="+">+</button>
-    </div>
-    <div class="keypad">${[1,2,3,4,5,6,7,8,9].map(k).join("")}${k(".")}${k(0)}
-      <button type="button" class="del" data-pad="${id}" data-k="del">⌫</button></div>`;
+    </div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-pad]"); if(!b) return;
   e.preventDefault();
   const inp = document.getElementById(b.dataset.pad); if(!inp) return;
-  const k = b.dataset.k; let v = String(inp.value || "");
-  if(k === "del")                 v = v.slice(0, -1);
-  else if(k === "+" || k === "-"){
-    const st = num(inp.dataset.step) || 1;
-    v = qtyF(Math.max(0, Math.round((num(v) + (k === "+" ? st : -st)) * 1000) / 1000));
-  }
-  else if(k === "."){ if(!v.includes(".")) v = (v || "0") + "."; }
-  else                            v = (v === "0" ? "" : v) + k;
-  inp.value = v;
-  inp.dispatchEvent(new Event("input", { bubbles:true }));
+  const st = num(inp.dataset.step) || 1;
+  inp.value = qtyF(Math.max(0, Math.round((num(inp.value) + (b.dataset.k === "+" ? st : -st)) * 1000) / 1000));
   inp.dispatchEvent(new Event("change", { bubbles:true }));
 });
 
@@ -1656,10 +1639,8 @@ function askQty(p){
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="q-ok">زيد للسلة</button></div>`,
   () => {
     const inp = $("#q-in");
-    const upd8 = () => $("#q-tot").innerHTML = DT(num(inp.value) * (p.price || 0));
-    inp.oninput = upd8;
+    inp.onchange = () => $("#q-tot").innerHTML = DT(num(inp.value) * (p.price || 0));
     $("#q-ok").onclick = () => { const q = num(inp.value); if(q <= 0) return toast("الكمية لازم أكبر من 0"); closeSheet(); addToCart(p, q); };
-    inp.onkeydown = e => e.key === "Enter" && $("#q-ok").click();
   });
 }
 ACT["close"] = () => closeSheet();
@@ -1693,7 +1674,7 @@ function openCart(){
       const t = Math.max(0, cartTotal() - num($("#c-rem").value));
       $("#c-sub").innerHTML = DT(cartTotal()); $("#c-tot").innerHTML = DT(t);
     };
-    $("#c-rem").oninput = upd8;
+    $("#c-rem").onchange = upd8;
     $("#c-mode").onchange = e => {
       $("#c-cli-wrap").classList.toggle("hidden", e.target.value !== "credit");
     };
@@ -1709,7 +1690,7 @@ function openCart(){
       if(!CART.length){ closeSheet(); cartSync(); render("p-pos"); return; }
       $("#cart-lines").innerHTML = cartLines(); upd8(); cartSync();
     };
-    $("#cart-lines").oninput = ev => {
+    $("#cart-lines").onchange = ev => {
       const inp = ev.target.closest("input[data-i]"); if(!inp) return;
       CART[+inp.dataset.i].qty = num(inp.value); upd8(); cartSync();
     };
