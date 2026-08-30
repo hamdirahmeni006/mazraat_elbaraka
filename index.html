@@ -295,6 +295,31 @@ nav button.on svg{stroke-width:2.4}
   @keyframes up{from{opacity:0;transform:translateY(-46%)}to{opacity:1;transform:translateY(-50%)}}
 }
 
+/* ---------- direction / langue ---------- */
+.tl{text-align:left}
+.tr2{text-align:right}
+[dir=ltr] .tl{text-align:right}
+[dir=ltr] .tr2{text-align:left}
+[dir=ltr] .tbl th{text-align:left}
+[dir=ltr] .tbl .n{text-align:right}
+[dir=ltr] .item .rt{text-align:right}
+[dir=ltr] .doc .hd .r{text-align:right}
+[dir=ltr] .doc th{text-align:left}
+[dir=ltr] .doc .tot{margin-right:0;margin-left:auto}
+[dir=ltr] .search .si{right:auto;left:13px}
+[dir=ltr] .sw::after{right:auto;left:3px}
+[dir=ltr] .dot{margin-left:0;margin-right:5px}
+[dir=ltr] select.inp,[dir=ltr] select{background-position:right 18px top 50%,right 13px top 50%;
+  padding-left:14px;padding-right:34px}
+#hd-lang,#au-lang{font-weight:900;font-size:12.5px;letter-spacing:.5px;line-height:1}
+#au-lang{position:absolute;top:14px;inset-inline-end:14px;width:38px;height:32px;border-radius:10px;
+  border:1.5px solid var(--line);background:var(--surface-2);color:var(--g800);cursor:pointer}
+.auth-card{position:relative}
+@media(min-width:900px){
+  [dir=ltr] nav{border-left:none;border-right:1px solid var(--line)}
+  [dir=ltr] .cart-bar{right:0;left:232px}
+}
+
 /* ---------- impression ---------- */
 #print{display:none}
 @media print{
@@ -329,6 +354,7 @@ nav button.on svg{stroke-width:2.4}
 <!-- ============ CONNEXION ============ -->
 <section id="auth" class="hidden">
   <div class="auth-card">
+    <button id="au-lang" title="AR / FR">FR</button>
     <img class="auth-logo" src="icons/icon-512.png" alt="مزرعة البركة">
     <h1>مزرعة البركة</h1>
     <div class="sub">دواجن • بيض • أجبان ومشتقات • توابل<br>فضاء الإدارة — دخول خاص</div>
@@ -358,6 +384,7 @@ nav button.on svg{stroke-width:2.4}
         <h1 id="hd-title">مزرعة البركة</h1>
         <div class="sub"><span id="hd-sub">لوحة القيادة</span><span class="dot" id="hd-dot" title="الاتصال"></span></div>
       </div>
+      <button class="icon-btn" id="hd-lang" title="AR / FR">FR</button>
       <button class="icon-btn" id="hd-bell" title="التنبيهات">
         <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
       </button>
@@ -397,6 +424,9 @@ nav button.on svg{stroke-width:2.4}
 <div id="toast"></div>
 <div id="print"></div>
 
+<script>try{if(localStorage.getItem("mb-lang")==="fr"){var h=document.documentElement;h.lang="fr";h.dir="ltr";
+document.title="Mazraat El Baraka — Gestion";}}catch(e){}</script>
+
 <script type="module">
 /* ============================================================
    1) CONFIGURATION
@@ -412,7 +442,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "1.0.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "1.1.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -421,6 +451,635 @@ const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const num = v => { const n = parseFloat(String(v ?? "").replace(",", ".")); return isNaN(n) ? 0 : n; };
+
+const I18N = {
+"على iPhone":"|Sur iPhone",
+"شارك":"مشاركة|Partager",
+"باش نزيدو ~14 منتج شائع (دجاج، بيض، أجبان…) تنجم تبدّلهم أو تحذفهم بعد.":"سنضيف ~14 منتجا شائعا (دجاج، بيض، أجبان…) يمكنك تعديلها أو حذفها لاحقا.|Nous allons ajouter ~14 produits courants (poulet, œufs, fromages…). Vous pourrez les modifier ou les supprimer ensuite.",
+"هذا الجهاز يقبل التنبيهات حتى والتطبيق مسكّر":"هذا الجهاز يستقبل الإشعارات حتى عند إغلاق التطبيق|Cet appareil reçoit les notifications même application fermée",
+"السلع هاذي كميتها في المخزون أقل من المطلوب":"هذه المواد كميتها في المخزون أقل من الحد المطلوب|Ces articles sont sous le seuil de stock",
+"باش تجي التنبيهات من بعيد لازم تحط مفتاح":"لاستقبال الإشعارات عن بعد يجب إدخال مفتاح|Pour recevoir les notifications à distance, il faut la clé",
+"اعمل فاتورة لحريف جملة أو عرض سعر لمطعم":"أنشئ فاتورة لزبون بالجملة أو عرض سعر لمطعم|Créez une facture pour un client de gros ou un devis pour un restaurant",
+"الحسابات تُنشأ فقط من طرف المسؤول في":"الحسابات تُنشأ من طرف المسؤول فقط في|Les comptes sont créés uniquement par l'administrateur dans",
+"باش تتنحّى كل السلع من السلة الحالية":"سيتم حذف جميع المواد من السلة الحالية|Tous les articles du panier vont être retirés",
+"تثبّت من الأنترنت وعاود افتح التطبيق":"تحقّق من الاتصال بالإنترنت ثم أعد فتح التطبيق|Vérifiez votre connexion Internet et rouvrez l'application",
+"تنبيه كي تنقص سلعة ولا تقرب الصلوحية":"تنبيه عند نقص مادة أو اقتراب تاريخ الصلاحية|Alerte en cas de stock bas ou de péremption proche",
+"لازم تسجّل المنتجات متاعك في المخزون":"يجب تسجيل منتجاتك في المخزون|vous devez enregistrer vos produits dans le stock",
+"تنجم تكمل والمخزون باش ينقص للسالب":"يمكنك المتابعة وسينزل المخزون إلى قيمة سالبة|Vous pouvez continuer, le stock passera en négatif",
+"بعثنالك إيميل باش تبدّل كلمة السر":"أرسلنا لك بريدا لتغيير كلمة السر|Un e-mail de réinitialisation vous a été envoyé",
+"اضغط على الحريف باش تسجّل الخلاص":"اضغط على الزبون لتسجيل الدفع|Touchez un client pour enregistrer un règlement",
+"اضغط على السلعة باش تزيدها للسلة":"اضغط على المادة لإضافتها إلى السلة|Touchez un article pour l'ajouter au panier",
+"الحرفاء يلزموك كان تبيع بالكريدي":"الزبائن ضروريون عند البيع بالدين|Les clients servent aux ventes à crédit",
+"التنبيهات مفعّلة على هذا الجهاز":"الإشعارات مفعّلة على هذا الجهاز|Notifications activées sur cet appareil",
+"للصندوق ونعلّمو الفاتورة مخلّصة":"إلى الصندوق وتُعلَّم الفاتورة مدفوعة|en caisse et la facture sera marquée payée",
+"مرحبا بيك في تطبيق مزرعة البركة":"مرحبا بك في تطبيق مزرعة البركة|Bienvenue dans l'application Mazraat El Baraka",
+"هذا الحساب معطّل من طرف المسؤول":"|Ce compte a été désactivé par l'administrateur",
+"أصناف المنتجات وأصناف المصاريف":"|Catégories de produits et de dépenses",
+"صبّ نسخة من كل البيانات في ملف":"احفظ نسخة من كل البيانات في ملف|Enregistrer une copie de toutes les données",
+"المبيعات القديمة تبقى كيما هي":"المبيعات القديمة تبقى كما هي|Les ventes déjà enregistrées ne changent pas",
+"زيد المنتجات في المخزون الأول":"أضف المنتجات إلى المخزون أولا|Ajoutez d'abord des produits au stock",
+"لا يوجد تسجيل جديد من التطبيق":"لا يمكن إنشاء حساب من التطبيق|Aucune inscription depuis l'application",
+"اختار المزود باش نسجلو الدين":"اختر المورّد لتسجيل الدين|Choisissez le fournisseur pour enregistrer la dette",
+"اكتب البريد الإلكتروني الأول":"أدخل البريد الإلكتروني أولا|Saisissez d'abord votre e-mail",
+"اختار الحريف باش تسجل الدين":"اختر الزبون لتسجيل الدين|Choisissez le client pour enregistrer la créance",
+"الشراءات القديمة تبقى مسجلة":"المشتريات القديمة تبقى مسجّلة|Les achats déjà enregistrés sont conservés",
+"المبيعات القديمة تبقى مسجلة":"المبيعات القديمة تبقى مسجّلة|Les ventes déjà enregistrées sont conservées",
+"البريد أو كلمة السر غالطين":"البريد الإلكتروني أو كلمة السر خاطئة|E-mail ou mot de passe incorrect",
+"البريد الإلكتروني غير صحيح":"|Adresse e-mail invalide",
+"المتصفح ما يدعمش التنبيهات":"المتصفّح لا يدعم الإشعارات|Ce navigateur ne gère pas les notifications",
+"تسجّل الوصل والمخزون تعمّر":"سجّل الوصل فيمتلئ المخزون|Enregistrez le bon et le stock se remplit",
+"تظهر في الفواتير والتيكيات":"تظهر في الفواتير والتذاكر|Apparaît sur les factures et les tickets",
+"تنجم تبدّلهم أو تحذفهم بعد":"يمكنك تعديلها أو حذفها لاحقا|Vous pourrez les modifier ou les supprimer ensuite",
+"إضافة إلى الشاشة الرئيسية":"|Sur l'écran d'accueil",
+"الأداء على القيمة المضافة":"|TVA",
+"باش يتزامن كي ترجع الشبكة":"ستتم المزامنة عند عودة الشبكة|sera synchronisé au retour du réseau",
+"فعّلها من إعدادات المتصفح":"فعّلها من إعدادات المتصفّح|Activez-les dans les réglages du navigateur",
+"كل المداخيل ناقص المصاريف":"|Toutes les entrées moins les dépenses",
+"ما فماش مبيعات في هالفترة":"لا توجد مبيعات في هذه الفترة|Aucune vente sur cette période",
+"ويتنحّى المبلغ من الصندوق":"ويُخصم المبلغ من الصندوق|et le montant sera retiré de la caisse",
+"اضغط باش تسمح بالتنبيهات":"اضغط للسماح بالإشعارات|Touchez pour autoriser les notifications",
+"التحديثات غير متوفرة هنا":"التحديثات غير متوفّرة هنا|Mises à jour indisponibles ici",
+"تطبيق إدارة مزرعة البركة":"|Application de gestion Mazraat El Baraka",
+"تنزيل التطبيق في التلفون":"تثبيت التطبيق على الهاتف|Installer l'application sur le téléphone",
+"غير متوفر على هذا الجهاز":"غير متوفّر على هذا الجهاز|Non disponible sur cet appareil",
+"ما فماش حركات في هالفترة":"لا توجد حركات في هذه الفترة|Aucun mouvement sur cette période",
+"ما فماش حساب بهذا البريد":"لا يوجد حساب بهذا البريد|Aucun compte avec cet e-mail",
+"الكمية الحقيقية في الرف":"الكمية الفعلية في الرفّ|Quantité réelle en rayon",
+"باش يتبدّل رصيد الصندوق":"سيتغيّر رصيد الصندوق|Le solde de caisse sera modifié",
+"تسجيل الخلاص في الصندوق":"تسجيل الدفع في الصندوق|Enregistrer le règlement en caisse",
+"ما فماش سلعة بهذا الاسم":"لا توجد مادة بهذا الاسم|Aucun article à ce nom",
+"ما فماش شبكة باش نتفقدو":"لا توجد شبكة للتحقّق|Pas de réseau pour vérifier",
+"ما نجمناش نبعثو الإيميل":"تعذّر إرسال البريد|Impossible d'envoyer l'e-mail",
+"آخر المشتريات بالكريدي":"آخر المشتريات بالدين|Derniers achats à crédit",
+"اضغط باش تركّبو كتطبيق":"اضغط لتثبيته كتطبيق|Touchez pour l'installer comme application",
+"التنبيهات المحلية تخدم":"الإشعارات المحلية تعمل|Les notifications locales fonctionnent",
+"باش ترجع السلع للمخزون":"ستعود المواد إلى المخزون|Les articles retourneront en stock",
+"تلغى البيع ورجعت السلع":"أُلغيت العملية وعادت المواد|Vente annulée, articles remis en stock",
+"عمّر البريد وكلمة السر":"أدخل البريد وكلمة السر|Saisissez l'e-mail et le mot de passe",
+"الكمية تتبدّل عن طريق":"تتغيّر الكمية عن طريق|La quantité se modifie via",
+"باش ترجع لصفحة الدخول":"ستعود إلى صفحة الدخول|Vous reviendrez à l'écran de connexion",
+"رصيد الصندوق الإجمالي":"|Solde total de la caisse",
+"منتج قرب تفوت صلوحيتو":"منتج اقترب تاريخ صلاحيته|produit(s) bientôt périmé(s)",
+"البيانات تتسجل محليا":"تُحفظ البيانات محليا|Données enregistrées en local",
+"التسجيل يتواصل محليا":"يتواصل التسجيل محليا|L'enregistrement continue en local",
+"الكمية اللي باش تزيد":"الكمية المراد إضافتها|Quantité à ajouter",
+"الكمية اللي باش تنقص":"الكمية المراد خصمها|Quantité à retirer",
+"حد التنبيه الافتراضي":"حدّ التنبيه الافتراضي|Seuil d'alerte par défaut",
+"فعّل التنبيهات الأول":"فعّل الإشعارات أولا|Activez d'abord les notifications",
+"لازمك تتفقد هالحاجات":"عليك مراجعة هذه النقاط|À vérifier",
+"ما تسمحتش بالتنبيهات":"لم يتم السماح بالإشعارات|Notifications non autorisées",
+"ما تنجمش تتحذف وحدها":"لا يمكن حذفها بمفردها|Elle ne peut pas être supprimée seule",
+"ما فماش حرفاء مسجلين":"لا يوجد زبائن مسجّلون|Aucun client enregistré",
+"الربح ناقص المصاريف":"|Bénéfice moins dépenses",
+"الكمية لازم أكبر من":"يجب أن تكون الكمية أكبر من|La quantité doit être supérieure à",
+"تعمير قائمة نموذجية":"تعبئة قائمة نموذجية|Charger une liste type",
+"عاود كي ترجع الشبكة":"أعد المحاولة عند عودة الشبكة|Réessayez au retour du réseau",
+"أُنجز بواسطة تطبيق":"|Édité avec l'application",
+"إمضاء وختم المزوّد":"إمضاء وختم المورّد|Signature et cachet du fournisseur",
+"الفوترة والتنبيهات":"الفوترة والإشعارات|Facturation et notifications",
+"حتى والتطبيق مسكّر":"حتى عند إغلاق التطبيق|même application fermée",
+"زيد سلعة على الأقل":"أضف مادة واحدة على الأقل|Ajoutez au moins un article",
+"سلعة قربت صلوحيتها":"مادة اقترب تاريخ صلاحيتها|article(s) bientôt périmé(s)",
+"طبع تيكي بعد البيع":"طباعة تذكرة بعد البيع|Imprimer le ticket après la vente",
+"فواتير وعروض أسعار":"|Factures et devis",
+"ما فماش مبيعات بعد":"لا توجد مبيعات بعد|Aucune vente pour l'instant",
+"ما فماش منتجات هنا":"لا توجد منتجات هنا|Aucun produit ici",
+"ما نجمناش نوصلو لـ":"تعذّر الاتصال بـ|Impossible de joindre",
+"مبيع في آخر الفترة":"مُباع خلال الفترة الأخيرة|vendu sur la période",
+"اضغط لإتمام البيع":"|Touchez pour encaisser",
+"البريد الإلكتروني":"|E-mail",
+"التطبيق يخدم مليح":"التطبيق يعمل بشكل جيّد|L'application fonctionne bien",
+"المبيعات يوم بيوم":"المبيعات يوما بيوم|Ventes jour par jour",
+"المجموع مع الأداء":"|Total TTC",
+"حسب رقم المعاملات":"|Par chiffre d'affaires",
+"خلاص فاتورة الضوء":"دفع فاتورة الكهرباء|Paiement facture électricité",
+"زيد سطر على الأقل":"أضف سطرا واحدا على الأقل|Ajoutez au moins une ligne",
+"قبل ما تبدا البيع":"قبل أن تبدأ البيع|Avant de commencer à vendre",
+"مرتبطة بعملية بيع":"|Liée à une vente",
+"آخر عمليات البيع":"|Dernières ventes",
+"أو من دين الحريف":"أو من دين الزبون|ou de la créance du client",
+"استنى شوية وعاود":"انتظر قليلا ثم أعد المحاولة|Patientez un instant puis réessayez",
+"الاسم باللاتينية":"|Nom en latin",
+"التنبيهات ممنوعة":"الإشعارات محظورة|Notifications bloquées",
+"الرصيد الافتتاحي":"|Solde d'ouverture",
+"المجموع بالدينار":"|Total en dinars",
+"المجموع دون أداء":"|Total HT",
+"المخزون ما يكفيش":"المخزون غير كافٍ|Stock insuffisant",
+"باش يتسجّل كل شي":"ليُسجَّل كل شيء|pour que tout soit enregistré",
+"بلا شراء البضاعة":"دون احتساب شراء البضاعة|hors achat de marchandise",
+"تفعّلت التنبيهات":"تم تفعيل الإشعارات|Notifications activées",
+"ديون على الحرفاء":"ديون على الزبائن|Créances clients",
+"عدد عمليات البيع":"|Nombre de ventes",
+"اكتب اسم الحريف":"اكتب اسم الزبون|Saisissez le nom du client",
+"الحساب والتطبيق":"|Compte et application",
+"النسخ الاحتياطي":"|Sauvegarde",
+"تفعيل التنبيهات":"تفعيل الإشعارات|Activer les notifications",
+"كلمة السر غالطة":"كلمة السر خاطئة|Mot de passe incorrect",
+"كوردون بلو مجمد":"|Cordon bleu surgelé",
+"ما فماش تنبيهات":"لا توجد تنبيهات|Aucune alerte",
+"مشكل في الاتصال":"|Problème de connexion",
+"أصناف المصاريف":"|Catégories de dépenses",
+"أصناف المنتجات":"|Catégories de produits",
+"الاسم بالعربية":"|Nom en arabe",
+"الطابع الجبائي":"|Timbre fiscal",
+"الكمية الحالية":"|Quantité actuelle",
+"المبلغ المخلّص":"المبلغ المدفوع|Montant payé",
+"المجموع الفرعي":"|Sous-total",
+"المعرف الجبائي":"|Matricule fiscal",
+"تاريخ الصلوحية":"تاريخ الصلاحية|Date de péremption",
+"تحوّلت لفاتورة":"تم تحويلها إلى فاتورة|Convertie en facture",
+"تعمّرت القائمة":"تمت تعبئة القائمة|Liste chargée",
+"تنبيه الصلوحية":"تنبيه الصلاحية|Alerte péremption",
+"توزيع المبيعات":"|Répartition des ventes",
+"حوّلها لفاتورة":"حوّلها إلى فاتورة|Convertir en facture",
+"خلاص من الحريف":"دفعة من الزبون|Encaissement client",
+"زيد الكميات من":"أضف الكميات من|Ajoutez les quantités depuis",
+"سلعة قربت توفى":"مادة أوشكت على النفاد|article(s) en stock bas",
+"شكرا على ثقتكم":"|Merci de votre confiance",
+"ما رجّعش جيتون":"لم يُرجع أي جيتون|Aucun jeton renvoyé",
+"ما فماش أنترنت":"لا يوجد اتصال بالإنترنت|Pas de connexion Internet",
+"ما فماش شراءات":"لا توجد مشتريات|Aucun achat",
+"ما فماش مزودين":"لا يوجد موردون|Aucun fournisseur",
+"مجموع الشراءات":"مجموع المشتريات|Total des achats",
+"مجموع المداخيل":"|Total des entrées",
+"مجموع المصاريف":"|Total des dépenses",
+"مجموع مشترياته":"|Total de ses achats",
+"نسيت كلمة السر":"|Mot de passe oublié",
+"أجبان ومشتقات":"|Fromages et dérivés",
+"أفضل المنتجات":"|Meilleurs produits",
+"إمضاء المسؤول":"|Signature du responsable",
+"التزامن يشتغل":"المزامنة تعمل|Synchronisation active",
+"التطبيق تركّب":"تم تثبيت التطبيق|Application installée",
+"التطبيق مركّب":"التطبيق مثبّت|Application installée",
+"الحساب البنكي":"|Compte bancaire",
+"الربح المنتظر":"الربح المتوقّع|Bénéfice attendu",
+"الرصيد الحالي":"|Solde actuel",
+"الرصيد الصافي":"|Solde net",
+"تنزّلت النسخة":"تم تنزيل النسخة|Version téléchargée",
+"حركات الصندوق":"|Mouvements de caisse",
+"ديك رومي فيلي":"|Filet de dinde",
+"ديون للمزودين":"ديون للموردين|Dettes fournisseurs",
+"رقم المعاملات":"|Chiffre d'affaires",
+"زيد منتج جديد":"أضف منتجا جديدا|Ajouter un produit",
+"سجّلناه محليا":"|Enregistré en local",
+"طباعة التقرير":"|Imprimer le rapport",
+"عاود المحاولة":"أعد المحاولة|Réessayer",
+"عاود بعد شوية":"أعد المحاولة بعد قليل|Réessayez dans un instant",
+"عندك آخر نسخة":"لديك آخر نسخة|Vous avez la dernière version",
+"غير متوفر هنا":"غير متوفّر هنا|Non disponible ici",
+"قائمة نموذجية":"|Liste type",
+"ما فماش وثائق":"لا توجد وثائق|Aucun document",
+"معلومات المحل":"|Informations du magasin",
+"منتج قرب يوفى":"منتج أوشك على النفاد|produit(s) bientôt épuisé(s)",
+"وصل شراء جديد":"|Nouveau bon d'achat",
+"زيد من المخزون":"أضف من المخزون|Depuis le stock",
+"آخر الخلاصات":"آخر الدفعات|Derniers règlements",
+"آخر الشراءات":"آخر المشتريات|Derniers achats",
+"إمضاء الحريف":"إمضاء الزبون|Signature du client",
+"اختار الحريف":"اختر الزبون|Choisir le client",
+"استهلاك ذاتي":"|Consommation propre",
+"الدين الجملي":"الدين الإجمالي|Dette totale",
+"الدين الحالي":"|Dette actuelle",
+"الشهر الفارط":"الشهر الماضي|Mois dernier",
+"الكمية ولّات":"أصبحت الكمية|Quantité mise à",
+"المخزون فارغ":"|Stock vide",
+"المخزون مليح":"المخزون جيّد|Stock correct",
+"بجنب العنوان":"بجانب العنوان|à côté de l'adresse",
+"تحليل النشاط":"|Analyse de l'activité",
+"تسجيل الخلاص":"تسجيل الدفع|Enregistrer le règlement",
+"تسجّل الخلاص":"سجّل الدفع|Enregistrez le règlement",
+"تعديل الكمية":"|Modifier la quantité",
+"تعديل المنتج":"|Modifier le produit",
+"تقرير النشاط":"|Rapport d'activité",
+"جاري التحديث":"جارٍ التحديث|Mise à jour…",
+"جبن موزاريلا":"|Mozzarella",
+"حالة الاتصال":"|État de la connexion",
+"حط سعر البيع":"أدخل سعر البيع|Indiquez le prix de vente",
+"دجاج مارينيه":"دجاج متبّل|Poulet mariné",
+"ديون الحرفاء":"ديون الزبائن|Créances clients",
+"رصيد الصندوق":"|Solde de caisse",
+"زيد أول منتج":"أضف أول منتج|Ajouter un premier produit",
+"سجل الشراءات":"سجلّ المشتريات|Journal des achats",
+"سجل المبيعات":"سجلّ المبيعات|Journal des ventes",
+"سجّل أول وصل":"|Enregistrer un premier bon",
+"شراء من مزود":"شراء من مورّد|Achat fournisseur",
+"صلوحية قريبة":"صلاحية قريبة|Péremption proche",
+"طريقة الخلاص":"طريقة الدفع|Mode de paiement",
+"فاتورة جديدة":"|Nouvelle facture",
+"فضاء الإدارة":"|Espace de gestion",
+"فواتير وعروض":"|Factures et devis",
+"قيمة المخزون":"|Valeur du stock",
+"لوج على سلعة":"ابحث عن مادة|Rechercher un article",
+"لوج على منتج":"ابحث عن منتج|Rechercher un produit",
+"لوحة القيادة":"|Tableau de bord",
+"مبيعات اليوم":"|Ventes du jour",
+"محاولات برشا":"محاولات كثيرة|Trop de tentatives",
+"مزرعة البركة":"|Mazraat El Baraka",
+"مصاريف اليوم":"|Dépenses du jour",
+"أو الشراءات":"أو المشتريات|ou les achats",
+"إتمام البيع":"|Encaisser",
+"إلغاء البيع":"|Annuler la vente",
+"افصل بفاصلة":"|séparées par des virgules",
+"اكتب المبلغ":"أدخل المبلغ|Saisissez le montant",
+"الأعلى قيمة":"|Valeur décroissante",
+"الاسم ضروري":"الاسم إجباري|Le nom est obligatoire",
+"الربح الخام":"|Marge brute",
+"بدون أنترنت":"بدون إنترنت|Hors ligne",
+"تأكيد البيع":"|Confirmer la vente",
+"تجربة تنبيه":"تجربة إشعار|Tester une notification",
+"ترتيب أبجدي":"|Ordre alphabétique",
+"تزاد المنتج":"تمت إضافة المنتج|Produit ajouté",
+"تسجيل الوصل":"|Enregistrer le bon",
+"تفريغ السلة":"|Vider le panier",
+"تنزّل الملف":"تم تنزيل الملف|Fichier téléchargé",
+"جاري الدخول":"جارٍ الدخول|Connexion…",
+"حذف الوثيقة":"|Supprimer le document",
+"خلاص فاتورة":"دفع فاتورة|Paiement de facture",
+"خلاص للمزود":"دفعة للمورّد|Paiement fournisseur",
+"رجع الاتصال":"عاد الاتصال|Connexion rétablie",
+"شوف المخزون":"عرض المخزون|Voir le stock",
+"قيمة الشراء":"|Valeur d'achat",
+"كميات ضعيفة":"كميات منخفضة|Stocks bas",
+"كهرباء وماء":"|Électricité et eau",
+"من المبيعات":"|des ventes",
+"نسبة الأداء":"|Taux de TVA",
+"هريسة معلبة":"هريسة معلّبة|Harissa en conserve",
+"ياغرت طبيعي":"لبن طبيعي|Yaourt nature",
+"أجنحة دجاج":"|Ailes de poulet",
+"أفخاذ دجاج":"|Cuisses de poulet",
+"إرجاع حريف":"إرجاع زبون|Retour client",
+"إضافة منتج":"|Ajouter un produit",
+"اختار سلعة":"اختر مادة|Choisir un article",
+"اسم المنتج":"|Nom du produit",
+"الأقل كمية":"|Quantité croissante",
+"العمل محلي":"العمل محلّي|Mode hors ligne",
+"باش يتنحّى":"سيتم حذف|Suppression de",
+"تسجيل خلاص":"تسجيل دفعة|Enregistrer un règlement",
+"تعديل كمية":"|Ajuster la quantité",
+"تم التعديل":"|Modification enregistrée",
+"جاري البحث":"جارٍ البحث|Recherche…",
+"حد التنبيه":"حدّ التنبيه|Seuil d'alerte",
+"حذف الحركة":"|Supprimer le mouvement",
+"حذف الحريف":"حذف الزبون|Supprimer le client",
+"حذف المزود":"حذف المورّد|Supprimer le fournisseur",
+"حذف المنتج":"|Supprimer le produit",
+"سعر الشراء":"|Prix d'achat",
+"شراء بضاعة":"|Achat de marchandise",
+"شوف حتى في":"تحقّق أيضا في|Vérifiez aussi dans",
+"صافي الربح":"|Bénéfice net",
+"صافي اليوم":"|Net du jour",
+"طرق الخلاص":"طرق الدفع|Modes de paiement",
+"قيمة البيع":"|Valeur de vente",
+"كبد ومصران":"كبد وأمعاء|Foie et abats",
+"كل شي مليح":"كل شيء على ما يرام|Tout va bien",
+"كمية ضعيفة":"كمية منخفضة|Stock bas",
+"مبيعات آخر":"مبيعات آخر|Ventes des",
+"مدخول جديد":"|Nouvelle entrée",
+"مصروف جديد":"|Nouvelle dépense",
+"معدل السلة":"متوسّط السلة|Panier moyen",
+"من المخزون":"|du stock",
+"نسخة جديدة":"|Nouvelle version",
+"نقانق دجاج":"|Merguez de poulet",
+"نقطة البيع":"|Caisse",
+"هامش الربح":"|Marge",
+"وصول بضاعة":"|Réception marchandise",
+"اكتب كمية":"أدخل كمية|Saisissez une quantité",
+"الإعدادات":"|Réglages",
+"التنبيهات":"الإشعارات|Notifications",
+"باش نزيدو":"سنضيف|Ajout de",
+"بدون مزود":"بدون مورّد|Sans fournisseur",
+"بدون هاتف":"|Sans téléphone",
+"حريف جديد":"زبون جديد|Nouveau client",
+"حسب الصنف":"|Par catégorie",
+"خلاص حريف":"دفعة زبون|Règlement client",
+"خلاص مزود":"دفعة مورّد|Règlement fournisseur",
+"دجاج كامل":"|Poulet entier",
+"دين علينا":"|Dette à payer",
+"زيد للسلة":"أضف إلى السلة|Ajouter au panier",
+"سعر البيع":"|Prix de vente",
+"شراء جديد":"|Nouvel achat",
+"عملية بيع":"|Vente",
+"كتابة حرة":"كتابة حرّة|Saisie libre",
+"كشف اليوم":"|Relevé du jour",
+"كلمة السر":"|Mot de passe",
+"مزود جديد":"مورّد جديد|Nouveau fournisseur",
+"ملخص سريع":"ملخّص سريع|Aperçu rapide",
+"منتج جديد":"|Nouveau produit",
+"منتج شائع":"|produits courants",
+"نقل ووقود":"|Transport et carburant",
+"هذا الشهر":"|Ce mois-ci",
+"آخر دخول":"|Dernière connexion",
+"أنشئه في":"|Créez-le dans",
+"اختصارات":"|Raccourcis",
+"الاختصاص":"النشاط|Activité",
+"التقارير":"|Rapports",
+"الخلاصات":"الدفعات|Règlements",
+"الشراءات":"المشتريات|Achats",
+"الصلوحية":"الصلاحية|Péremption",
+"الفواتير":"|Factures",
+"المبيعات":"|Ventes",
+"المزودين":"الموردين|Fournisseurs",
+"المصاريف":"|Dépenses",
+"المنتجات":"|Produits",
+"بيع سريع":"|Vente rapide",
+"تم البيع":"|Vente enregistrée",
+"تيكي رقم":"تذكرة رقم|Ticket n°",
+"جبن ادام":"جبن إدام|Fromage Edam",
+"دخول خاص":"|Accès privé",
+"دين عليه":"|Doit",
+"زيد حريف":"أضف زبونا|Ajouter un client",
+"زيد سلعة":"أضف مادة|Ajouter un article",
+"زيد مزود":"أضف مورّدا|Ajouter un fournisseur",
+"شاركوتري":"|Charcuterie",
+"صدر دجاج":"|Blanc de poulet",
+"كشف يومي":"|Relevé journalier",
+"كمّل برك":"تابع على أي حال|Continuer quand même",
+"وصل جديد":"|Nouveau bon",
+"وصل شراء":"|Bon d'achat",
+"وصل مسجل":"تم تسجيل الوصل|Bon enregistré",
+"إعدادات":"|Réglages",
+"اختياري":"|facultatif",
+"الأصناف":"|Catégories",
+"الإدارة":"|Gestion",
+"الاتصال":"|Contact",
+"التاريخ":"|Date",
+"التسمية":"البيان|Désignation",
+"التطبيق":"|Application",
+"الحرفاء":"الزبائن|Clients",
+"الصندوق":"|Caisse",
+"الطريقة":"|Mode",
+"العنوان":"|Adresse",
+"المتوفر":"المتوفّر|Disponible",
+"المجموع":"|Total",
+"المخزون":"|Stock",
+"المخلّص":"المدفوع|Payé",
+"المزوّد":"المورّد|Fournisseur",
+"بيض طبق":"|Œufs plateau",
+"تنبيهات":"إشعارات|Alertes",
+"زيد سطر":"أضف سطرا|Ajouter une ligne",
+"عرض سعر":"|Devis",
+"أربعاء":"|Mer",
+"الأداء":"|TVA",
+"الأسطر":"البنود|Lignes",
+"الباقي":"|Reste",
+"الحالة":"|État",
+"الحريف":"الزبون|Client",
+"الحساب":"|Compte",
+"الخالص":"المدفوع|Payé",
+"الخلاص":"الدفع|Paiement",
+"الرصيد":"|Solde",
+"السلعة":"المادة|Article",
+"الشركة":"|Société",
+"الصافي":"|Net",
+"الطابع":"|Timbre",
+"القيمة":"|Valeur",
+"الكمية":"|Quantité",
+"المبلغ":"|Montant",
+"المزود":"المورّد|Fournisseur",
+"المزيد":"|Plus",
+"المنتج":"|Produit",
+"النسخة":"|Version",
+"الهاتف":"|Téléphone",
+"الوحدة":"|Unité",
+"باركود":"|Code-barres",
+"تسجّلت":"تم التسجيل|Enregistré",
+"تقارير":"|Rapports",
+"تنحّات":"تم الحذف|Supprimé",
+"ثلاثاء":"|Mar",
+"سجّلها":"|Enregistrer",
+"سطر حر":"سطر حرّ|Ligne libre",
+"شراءات":"مشتريات|Achats",
+"صلوحية":"صلاحية|Péremption",
+"فاتورة":"|Facture",
+"فواتير":"|Factures",
+"لا شيء":"|Aucun",
+"مبعوثة":"مُرسَلة|Envoyée",
+"مبيعات":"|Ventes",
+"متفرقة":"متفرّقة|Divers",
+"مجمدات":"مجمّدات|Surgelés",
+"مخلّصة":"مدفوعة|Payée",
+"مداخيل":"|Entrées",
+"مرينات":"مُتبّلات|Marinés",
+"مزودين":"موردين|Fournisseurs",
+"مصاريف":"|Dépenses",
+"ملاحظة":"|Remarque",
+"ممنوعة":"محظورة|Bloquées",
+"أجبان":"|Fromages",
+"إثنين":"|Lun",
+"إلغاء":"|Annuler",
+"إيداع":"|Dépôt",
+"الاسم":"|Nom",
+"الدين":"|Dette",
+"الربح":"|Bénéfice",
+"الرقم":"|N°",
+"السبب":"|Motif",
+"السعر":"|Prix",
+"السلع":"المواد|Articles",
+"الصنف":"|Catégorie",
+"النوع":"|Type",
+"الوصف":"|Description",
+"الوقت":"|Heure",
+"اليوم":"|Aujourd'hui",
+"تأكيد":"|Confirmer",
+"تحقّق":"|Vérifier",
+"تحويل":"|Virement",
+"تخفيض":"|Remise",
+"تركيب":"تثبيت|Installation",
+"تسجّل":"تم التسجيل|Enregistré",
+"تصحيح":"|Correction",
+"تصدير":"|Exporter",
+"تعديل":"|Modifier",
+"تفريغ":"|Vider",
+"تنبيه":"|Alerte",
+"تنحّى":"تم الحذف|Supprimé",
+"توابل":"|Épices",
+"حرفاء":"زبائن|Clients",
+"دواجن":"|Volaille",
+"زيادة":"|Ajout",
+"صندوق":"|Caisse",
+"صيانة":"|Entretien",
+"ضرائب":"|Impôts",
+"طباعة":"|Imprimer",
+"عملية":"|Opération",
+"كريدي":"دين|Crédit",
+"للدين":"|pour la dette",
+"مخزون":"|Stock",
+"مدخول":"|Entrée",
+"مسودة":"مسوّدة|Brouillon",
+"مصروف":"|Dépense",
+"نقصان":"خصم|Retrait",
+"وثيقة":"|Document",
+"وحدات":"|unités",
+"أجور":"|Salaires",
+"أخرى":"|Autre",
+"أهلا":"|Bonjour",
+"أيام":"|jours",
+"اضغط":"|Touchez",
+"الحد":"الحدّ|Seuil",
+"الكل":"|Tout",
+"باقي":"|Reste",
+"بدون":"|Sans",
+"تالف":"|Casse",
+"تيكي":"تذكرة|Ticket",
+"جديد":"|Nouveau",
+"جمعة":"|Ven",
+"حركة":"|Mouvement",
+"حريف":"زبون|Client",
+"خالص":"مدفوع|Payé",
+"خالي":"|Vide",
+"خروج":"|Déconnexion",
+"خلاص":"دفع|Paiement",
+"خميس":"|Jeu",
+"دجاج":"|Poulet",
+"دخول":"|Connexion",
+"ديون":"|Dettes",
+"رجوع":"|Retour",
+"زبدة":"|Beurre",
+"سلعة":"مادة|Article",
+"شراء":"|Achat",
+"شروط":"|Conditions",
+"علبة":"|Boîte",
+"عندك":"لديك|Vous avez",
+"فيلي":"|Filet",
+"قطعة":"|Pièce",
+"كراء":"|Loyer",
+"لوحة":"|Tableau",
+"متصل":"|En ligne",
+"مثال":"|Ex.",
+"مخصص":"مخصّص|Personnalisé",
+"مزود":"مورّد|Fournisseur",
+"منتج":"|Produit",
+"نسخة":"|Version",
+"نقدا":"|Espèces",
+"أحد":"|Dim",
+"بيض":"|Œufs",
+"بيع":"|Vente",
+"جرد":"|Inventaire",
+"حذف":"|Supprimer",
+"حفظ":"|Enregistrer",
+"خطأ":"|Erreur",
+"د.ت":"|DT",
+"دين":"|Crédit",
+"ربح":"|Bénéfice",
+"رقم":"|N°",
+"زيد":"أضف|Ajouter",
+"سبت":"|Sam",
+"سطر":"|Ligne",
+"شيك":"|Chèque",
+"طبق":"|Plateau",
+"عدد":"|Nb",
+"غلق":"إغلاق|Fermer",
+"كسر":"|Casse",
+"كود":"رمز|Code",
+"لتر":"|L",
+"وصل":"|Bon",
+"كغ":"|kg",
+"غ":"|g"
+};
+
+/* ============================================================
+   2 bis) LANGUES — العربية الفصحى / Français
+   ============================================================ */
+let LANG = "ar";
+try{ if(localStorage.getItem("mb-lang") === "fr") LANG = "fr"; }catch(e){}
+
+const _ORIG_T = new WeakMap();   /* nœud texte  -> texte arabe d'origine */
+const _ORIG_A = new WeakMap();   /* élément     -> {attribut: origine}   */
+let _RX = null;
+
+function _msa(k){ const v = I18N[k]; if(!v) return k; const p = v.split("|"); return p[0] || k; }
+function _fr(k){  const v = I18N[k]; if(!v) return k; const p = v.split("|"); return p[1] || k; }
+function one(k){ return LANG === "fr" ? _fr(k) : _msa(k); }
+
+function buildRx(){
+  let ks = Object.keys(I18N);
+  if(LANG !== "fr") ks = ks.filter(k => _msa(k) !== k);
+  ks.sort((a, b) => b.length - a.length);
+  if(!ks.length){ _RX = null; return; }
+  const esq = ks.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  _RX = new RegExp("(" + esq.join("|") + ")(?![\\u0621-\\u064A])", "g");
+}
+
+function trText(s){
+  if(!s) return s;
+  if(_RX) s = s.replace(_RX, (m, key, off, str) => {
+    const c = off > 0 ? str.charCodeAt(off - 1) : 0;      /* pas de coupure en plein mot */
+    return (c >= 0x621 && c <= 0x64A) ? m : one(key);
+  });
+  if(LANG === "fr"){
+    s = s.replace(/،/g, ",").replace(/؟/g, "?").replace(/؛/g, ";").replace(/٪/g, "%");
+    s = s.replace(_PLUR, (m, n, sp, w) =>
+      Number(n) > 1 ? n + sp + w + (/eau$/.test(w) ? "x" : "s") : m);
+  }
+  return s;
+}
+
+const _PLUR = /(\d+)(\s)(Produit|Client|Fournisseur|Article|Vente|Bon|Mouvement|Ligne|Document|Facture|Pièce|Boîte|Plateau|Alerte|Opération|produit|client|fournisseur|article|vente|ligne|jour|unité)(?![\wÀ-ÿ(])/g;
+
+const _SKIP  = { SCRIPT:1, STYLE:1, TEXTAREA:1, NOSCRIPT:1, SVG:1 };
+const _ATTRS = ["placeholder", "title", "aria-label", "alt"];
+
+function _fixText(n){
+  let o = _ORIG_T.get(n);
+  if(o === undefined){ o = n.nodeValue; _ORIG_T.set(n, o); }
+  const v = trText(o);
+  if(v !== n.nodeValue) n.nodeValue = v;
+}
+function _fixAttrs(el){
+  if(!el.getAttribute) return;
+  let m = _ORIG_A.get(el);
+  for(const a of _ATTRS){
+    if(!el.hasAttribute(a)) continue;
+    if(!m){ m = {}; _ORIG_A.set(el, m); }
+    if(m[a] === undefined) m[a] = el.getAttribute(a);
+    const v = trText(m[a]);
+    if(v !== el.getAttribute(a)) el.setAttribute(a, v);
+  }
+}
+function localize(node){
+  if(!node) return;
+  if(node.nodeType === 3) return _fixText(node);
+  if(node.nodeType !== 1 || _SKIP[node.tagName]) return;
+  _fixAttrs(node);
+  const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (n.parentNode && _SKIP[n.parentNode.tagName])
+      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  let n; while((n = w.nextNode())) _fixText(n);
+  node.querySelectorAll && node.querySelectorAll("[placeholder],[title],[aria-label],[alt]").forEach(_fixAttrs);
+}
+
+let _MO = null;
+function watchLang(){
+  if(_MO) return;
+  _MO = new MutationObserver(ms => { for(const m of ms) for(const n of m.addedNodes) localize(n); });
+  _MO.observe(document.body, { childList:true, subtree:true });
+}
+
+function applyLang(){
+  const h = document.documentElement;
+  h.lang = LANG;
+  h.dir  = LANG === "fr" ? "ltr" : "rtl";
+  buildRx();
+  document.title = LANG === "fr" ? "Mazraat El Baraka — Gestion" : "مزرعة البركة — الإدارة";
+  localize(document.body);
+  const lb = LANG === "fr" ? "ع" : "FR";
+  const t1 = $("#hd-lang"), t2 = $("#au-lang");
+  if(t1) t1.textContent = lb;
+  if(t2) t2.textContent = lb;
+}
+function setLang(l){
+  if(l === LANG) return;
+  LANG = l;
+  try{ localStorage.setItem("mb-lang", l); }catch(e){}
+  applyLang();
+  if(typeof S === "object" && S.page && $("#app") && !$("#app").classList.contains("hidden")){
+    buildNav(); go(S.page);
+  }
+  toast(LANG === "fr" ? "Langue : Français" : "اللغة : العربية");
+}
+const LFR = v => (LANG === "fr" || !v) ? "" : esc(v) + "<br>";
+function toggleLang(){ setLang(LANG === "fr" ? "ar" : "fr"); }
+
 
 function money(n, d = 3){
   n = Number(n) || 0;
@@ -441,13 +1100,14 @@ const AR_DAYS  = ["أحد","إثنين","ثلاثاء","أربعاء","خميس"
 const dayShort = k => AR_DAYS[new Date(k + "T12:00").getDay()];
 
 function toast(msg, ms = 2400){
-  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  const t = $("#toast"); t.textContent = trText(String(msg)); t.classList.add("on");
   clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), ms);
 }
 
 /* --- feuille modale --- */
 function sheet(title, body, onMount){
   $("#sheet-body").innerHTML = (title ? `<h3>${title}</h3>` : "") + body;
+  localize($("#sheet-body"));
   $("#sheet").classList.add("on");
   document.body.style.overflow = "hidden";
   onMount && onMount();
@@ -678,6 +1338,7 @@ function render(page){
   const f = RENDER[page]; if(!f) return;
   const host = $("#" + page); if(!host) return;
   host.innerHTML = f();
+  localize(host);
   RENDER[page + ":after"] && RENDER[page + ":after"]();
   paintBell(); cartSync();
 }
@@ -995,25 +1656,26 @@ async function doSale(){
    ============================================================ */
 function doPrint(html){
   $("#print").innerHTML = html;
+  localize($("#print"));
   setTimeout(() => { window.print(); }, 120);
 }
 function printTicket(s){
   const st = S.set;
   doPrint(`<div class="ticket">
-    <div class="c"><b style="font-size:15px">${esc(st.shop)}</b><br>${esc(st.shopFr || "")}<br>
+    <div class="c"><b style="font-size:15px">${esc(st.shop)}</b><br>${LFR(st.shopFr)}
       ${st.addr ? esc(st.addr) + "<br>" : ""}${st.phone ? "الهاتف : " + esc(st.phone) : ""}</div>
     <hr>
-    <table><tr><td>تيكي رقم</td><td style="text-align:left">#${s.no}</td></tr>
-      <tr><td>التاريخ</td><td style="text-align:left">${dfr(s.date)} ${hhmm(s.ts)}</td></tr>
-      ${s.clientName ? `<tr><td>الحريف</td><td style="text-align:left">${esc(s.clientName)}</td></tr>` : ""}</table>
+    <table><tr><td>تيكي رقم</td><td class="tl">#${s.no}</td></tr>
+      <tr><td>التاريخ</td><td class="tl">${dfr(s.date)} ${hhmm(s.ts)}</td></tr>
+      ${s.clientName ? `<tr><td>الحريف</td><td class="tl">${esc(s.clientName)}</td></tr>` : ""}</table>
     <hr>
     <table>${s.items.map(i => `<tr><td colspan="2"><b>${esc(i.name)}</b></td></tr>
-      <tr><td>${qtyF(i.qty)} ${esc(i.unit)} × ${money(i.price)}</td><td style="text-align:left">${money(i.qty * i.price)}</td></tr>`).join("")}</table>
+      <tr><td>${qtyF(i.qty)} ${esc(i.unit)} × ${money(i.price)}</td><td class="tl">${money(i.qty * i.price)}</td></tr>`).join("")}</table>
     <hr>
     <table>
-      ${s.discount ? `<tr><td>تخفيض</td><td style="text-align:left">− ${money(s.discount)}</td></tr>` : ""}
-      <tr><td><b style="font-size:14px">المجموع</b></td><td style="text-align:left"><b style="font-size:14px">${money(s.total)} د.ت</b></td></tr>
-      <tr><td>الخلاص</td><td style="text-align:left">${MODES[s.mode] || ""}</td></tr></table>
+      ${s.discount ? `<tr><td>تخفيض</td><td class="tl">− ${money(s.discount)}</td></tr>` : ""}
+      <tr><td><b style="font-size:14px">المجموع</b></td><td class="tl"><b style="font-size:14px">${money(s.total)} د.ت</b></td></tr>
+      <tr><td>الخلاص</td><td class="tl">${MODES[s.mode] || ""}</td></tr></table>
     <hr>
     <div class="c">شكرا على ثقتكم 🌿<br>${esc(st.shop)}</div>
   </div>`);
@@ -1285,7 +1947,7 @@ ACT["day-report"] = () => {
   const byMode = {};
   ds.forEach(s => byMode[s.mode] = (byMode[s.mode] || 0) + s.total);
   doPrint(`<div class="doc">
-    <div class="hd"><div><h1>${esc(S.set.shop)}</h1><div style="font-size:11px">${esc(S.set.shopFr || "")}</div></div>
+    <div class="hd"><div><h1>${esc(S.set.shop)}</h1><div style="font-size:11px">${LANG === "fr" ? "" : esc(S.set.shopFr || "")}</div></div>
       <div class="r"><b>كشف يومي</b><br>${dfr(t)}<br>${new Date().toLocaleTimeString("fr-FR")}</div></div>
     <h2>المبيعات</h2>
     <table><tr><th>#</th><th>الوقت</th><th>الحريف</th><th>الخلاص</th><th>المبلغ</th></tr>
@@ -1296,11 +1958,11 @@ ACT["day-report"] = () => {
       ${dc.map(c => `<tr><td>${hhmm(c.ts)}</td><td>${esc(c.label || "")}</td><td>${esc(c.cat || "")}</td><td>${c.type === "in" ? money(c.amount) : ""}</td><td>${c.type === "out" ? money(c.amount) : ""}</td></tr>`).join("") || '<tr><td colspan="5">لا شيء</td></tr>'}
     </table>
     <table class="tot">
-      ${Object.entries(byMode).map(([m, v]) => `<tr><td>مبيعات ${MODES[m] || m}</td><td style="text-align:left">${money(v)} د.ت</td></tr>`).join("")}
-      <tr><td>مجموع المداخيل</td><td style="text-align:left">${money(inn)} د.ت</td></tr>
-      <tr><td>مجموع المصاريف</td><td style="text-align:left">− ${money(out)} د.ت</td></tr>
-      <tr class="g"><td>صافي اليوم</td><td style="text-align:left">${money(inn - out)} د.ت</td></tr>
-      <tr class="g"><td>رصيد الصندوق الإجمالي</td><td style="text-align:left">${money(cashBal())} د.ت</td></tr>
+      ${Object.entries(byMode).map(([m, v]) => `<tr><td>مبيعات ${MODES[m] || m}</td><td class="tl">${money(v)} د.ت</td></tr>`).join("")}
+      <tr><td>مجموع المداخيل</td><td class="tl">${money(inn)} د.ت</td></tr>
+      <tr><td>مجموع المصاريف</td><td class="tl">− ${money(out)} د.ت</td></tr>
+      <tr class="g"><td>صافي اليوم</td><td class="tl">${money(inn - out)} د.ت</td></tr>
+      <tr class="g"><td>رصيد الصندوق الإجمالي</td><td class="tl">${money(cashBal())} د.ت</td></tr>
     </table>
     <div class="ft">إمضاء المسؤول : ……………………… &nbsp;&nbsp;&nbsp; عدد عمليات البيع : ${ds.length} &nbsp;&nbsp;&nbsp; الربح الخام : ${money(sumBy(ds, s => s.profit))} د.ت</div>
   </div>`);
@@ -1351,7 +2013,7 @@ function partyForm(kind, p, after){
       if(!d.name) return toast("الاسم ضروري");
       closeSheet();
       const c = kind === "sup" ? "suppliers" : "clients";
-      if(isNew){ d.balance = num($("#p-bal").value); await add(c, d); toast(`تزاد ال${L} ✓`); }
+      if(isNew){ d.balance = num($("#p-bal").value); await add(c, d); toast("تسجّل ✓"); }
       else await upd(c, p.id, d);
       after && after();
     };
@@ -1730,7 +2392,7 @@ function docForm(type, existing){
     <div class="sec-title">الأسطر</div>
     <div id="d-lines"></div>
     <div class="grid2" style="gap:8px;margin-top:8px">
-      <button class="btn line sm" id="d-addp">${ic("box",15)} من المخزون</button>
+      <button class="btn line sm" id="d-addp">${ic("box",15)} زيد من المخزون</button>
       <button class="btn line sm" id="d-addf">${ic("plus",15)} سطر حر</button>
     </div>
     <div class="grid3" style="margin-top:12px">
@@ -1765,7 +2427,7 @@ function docForm(type, existing){
             <div><label style="font-size:11px;color:var(--mute)">السعر</label><input class="inp" type="number" step="0.001" dir="ltr" data-dl="p" data-i="${i}" value="${l.pu}"></div>
             <button class="btn line sm" data-dl="x" data-i="${i}">${ic("trash",14)}</button>
           </div>
-          <div style="text-align:left;margin-top:6px;font-weight:800">${DT(l.qty * l.pu)}</div>
+          <div class="tl" style="margin-top:6px;font-weight:800">${DT(l.qty * l.pu)}</div>
         </div>`).join("") : `<div class="empty" style="padding:12px">زيد سطر</div>`;
       drawT();
     };
@@ -1860,24 +2522,24 @@ ACT["doc-print"] = id => {
   doPrint(`<div class="doc">
     <div class="hd">
       <div><h1>${esc(st.shop)}</h1>
-        <div style="font-size:11.5px;line-height:1.7">${esc(st.shopFr || "")}<br>${esc(st.slogan || "")}<br>
+        <div style="font-size:11.5px;line-height:1.7">${LFR(st.shopFr)}${esc(st.slogan || "")}<br>
         ${st.addr ? esc(st.addr) + "<br>" : ""}${st.phone ? "الهاتف : " + esc(st.phone) + "<br>" : ""}${st.mf ? "المعرف الجبائي : " + esc(st.mf) : ""}</div></div>
-      <div class="r"><b style="font-size:16px">${d.type === "facture" ? "فاتورة / FACTURE" : "عرض سعر / DEVIS"}</b><br>
-        عدد : <b>${d.no}/${(d.date || "").slice(0,4)}</b><br>التاريخ : ${dfr(d.date)}</div>
+      <div class="r"><b style="font-size:16px">${d.type === "facture" ? "فاتورة" : "عرض سعر"}</b><br>
+        الرقم : <b>${d.no}/${(d.date || "").slice(0,4)}</b><br>التاريخ : ${dfr(d.date)}</div>
     </div>
-    <table style="margin-bottom:6px"><tr><th style="width:50%">المزوّد / Fournisseur</th><th>الحريف / Client</th></tr>
+    <table style="margin-bottom:6px"><tr><th style="width:50%">المزوّد</th><th>الحريف</th></tr>
       <tr><td>${esc(st.shop)}<br>${esc(st.addr || "")}<br>${st.mf ? "MF : " + esc(st.mf) : ""}</td>
           <td><b>${esc(d.client?.name || "")}</b><br>${esc(d.client?.addr || "")}<br>${d.client?.mf ? "MF : " + esc(d.client.mf) : ""}</td></tr></table>
     <table>
-      <tr><th style="width:34px">#</th><th>التسمية / Désignation</th><th style="width:70px">الكمية</th><th style="width:90px">السعر</th><th style="width:100px">المبلغ</th></tr>
+      <tr><th style="width:34px">#</th><th>التسمية</th><th style="width:70px">الكمية</th><th style="width:90px">السعر</th><th style="width:100px">المبلغ</th></tr>
       ${(d.items || []).map((i, k) => `<tr><td>${k + 1}</td><td>${esc(i.d)}</td><td>${qtyF(i.qty)}</td><td>${money(i.pu)}</td><td>${money(i.qty * i.pu)}</td></tr>`).join("")}
     </table>
     <table class="tot">
-      <tr><td>المجموع دون أداء / Total HT</td><td style="text-align:left">${money(t.ht)} د.ت</td></tr>
-      ${t.rem ? `<tr><td>تخفيض / Remise ${d.remise}%</td><td style="text-align:left">− ${money(t.rem)} د.ت</td></tr>` : ""}
-      <tr><td>الأداء على القيمة المضافة / TVA ${d.tva}%</td><td style="text-align:left">${money(t.tva)} د.ت</td></tr>
-      ${t.timbre ? `<tr><td>الطابع الجبائي / Timbre</td><td style="text-align:left">${money(t.timbre)} د.ت</td></tr>` : ""}
-      <tr class="g"><td>المجموع مع الأداء / Total TTC</td><td style="text-align:left">${money(t.ttc)} د.ت</td></tr>
+      <tr><td>المجموع دون أداء</td><td class="tl">${money(t.ht)} د.ت</td></tr>
+      ${t.rem ? `<tr><td>تخفيض ${d.remise}%</td><td class="tl">− ${money(t.rem)} د.ت</td></tr>` : ""}
+      <tr><td>الأداء على القيمة المضافة ${d.tva}%</td><td class="tl">${money(t.tva)} د.ت</td></tr>
+      ${t.timbre ? `<tr><td>الطابع الجبائي</td><td class="tl">${money(t.timbre)} د.ت</td></tr>` : ""}
+      <tr class="g"><td>المجموع مع الأداء</td><td class="tl">${money(t.ttc)} د.ت</td></tr>
     </table>
     <div class="ft">
       <b>Arrêtée la présente ${d.type === "facture" ? "facture" : "offre"} à la somme de : ${enDinars(t.ttc)}.</b><br>
@@ -1990,14 +2652,14 @@ ACT["rep-print"] = () => {
     byProd[i.name].q += i.qty; byProd[i.name].ca += i.qty * i.price; byProd[i.name].pr += i.qty * (i.price - (i.cost || 0));
   }));
   doPrint(`<div class="doc">
-    <div class="hd"><div><h1>${esc(S.set.shop)}</h1><div style="font-size:11px">${esc(S.set.shopFr || "")}</div></div>
+    <div class="hd"><div><h1>${esc(S.set.shop)}</h1><div style="font-size:11px">${LANG === "fr" ? "" : esc(S.set.shopFr || "")}</div></div>
       <div class="r"><b>تقرير النشاط</b><br>${dfr(a)} → ${dfr(b)}</div></div>
     <table class="tot" style="width:100%">
-      <tr><td>رقم المعاملات</td><td style="text-align:left">${money(ca)} د.ت</td></tr>
-      <tr><td>الربح الخام</td><td style="text-align:left">${money(pr)} د.ت</td></tr>
-      <tr><td>المصاريف</td><td style="text-align:left">${money(dep)} د.ت</td></tr>
-      <tr><td>عدد عمليات البيع</td><td style="text-align:left">${sl.length}</td></tr>
-      <tr class="g"><td>الصافي</td><td style="text-align:left">${money(pr - dep)} د.ت</td></tr></table>
+      <tr><td>رقم المعاملات</td><td class="tl">${money(ca)} د.ت</td></tr>
+      <tr><td>الربح الخام</td><td class="tl">${money(pr)} د.ت</td></tr>
+      <tr><td>المصاريف</td><td class="tl">${money(dep)} د.ت</td></tr>
+      <tr><td>عدد عمليات البيع</td><td class="tl">${sl.length}</td></tr>
+      <tr class="g"><td>الصافي</td><td class="tl">${money(pr - dep)} د.ت</td></tr></table>
     <h2>المنتجات</h2>
     <table><tr><th>المنتج</th><th>الكمية</th><th>المبيعات</th><th>الربح</th></tr>
       ${Object.entries(byProd).sort((x, y) => y[1].ca - x[1].ca).map(([n, v]) =>
@@ -2032,7 +2694,7 @@ RENDER["p-more"] = () => `
        ["p-sales","📊","سجل المبيعات",`${S.sales.length} عملية`],
        ["p-rep","📈","التقارير","تحليل النشاط"],
        ["p-set","⚙️","الإعدادات","الحساب والتطبيق"]]
-      .map(([id, e, t, s]) => `<button class="card" style="text-align:right;margin:0" data-go2="${id}">
+      .map(([id, e, t, s]) => `<button class="card" class="tr2" style="margin:0" data-go2="${id}">
         <div style="font-size:26px">${e}</div><div style="font-weight:800;margin-top:6px">${t}</div>
         <div style="font-size:11.5px;color:var(--mute);margin-top:2px">${s}</div></button>`).join("")}
   </div>
@@ -2094,7 +2756,7 @@ RENDER["p-set"] = () => {
     <button class="btn block" id="s-save3">${ic("save",16)} حفظ</button>
   </div>
 
-  <div class="card"><h3>التنبيهات (Notifications)</h3>
+  <div class="card"><h3>التنبيهات</h3>
     <div class="csub">تنبيه كي تنقص سلعة ولا تقرب الصلوحية، حتى والتطبيق مسكّر</div>
     <div class="alert ${perm === "granted" ? "ok" : perm === "denied" ? "dan" : "info"}">
       <div class="ic">${perm === "granted" ? "🔔" : perm === "denied" ? "🔕" : "❓"}</div>
@@ -2129,7 +2791,7 @@ RENDER["p-set"] = () => {
       <div class="ds">آخر دخول : ${new Date(Number(S.user?.metadata?.lastLoginAt) || Date.now()).toLocaleString("fr-FR")}</div></div></div>
     <button class="btn dan block" style="margin-top:10px" id="s-out">${ic("out",16)} خروج</button>
   </div>
-  <div class="hint" style="text-align:center;margin:14px 0 4px">🌿 ${esc(st.shop)} — ${esc(st.shopFr || "")}</div>`;
+  <div class="hint" style="text-align:center;margin:14px 0 4px">🌿 ${esc(st.shop)}${LANG === "fr" ? "" : " — " + esc(st.shopFr || "")}</div>`;
 };
 RENDER["p-set:after"] = () => {
   const v = s => $(s)?.value.trim();
@@ -2145,9 +2807,9 @@ RENDER["p-set:after"] = () => {
   $("#s-test").onclick = async () => {
     if(window.Notification?.permission !== "granted") return toast("فعّل التنبيهات الأول");
     const r = swReg || await navigator.serviceWorker.ready.catch(() => null);
-    const body = "التطبيق يخدم مليح 🌿";
-    if(r) r.showNotification("مزرعة البركة", { body, icon:"icons/icon-192.png", badge:"icons/icon-192.png", vibrate:[60,40,60] });
-    else new Notification("مزرعة البركة", { body });
+    const body = trText("التطبيق يخدم مليح") + " 🌿";
+    if(r) r.showNotification(trText("مزرعة البركة"), { body, icon:"icons/icon-192.png", badge:"icons/icon-192.png", vibrate:[60,40,60] });
+    else new Notification(trText("مزرعة البركة"), { body });
   };
   const inst = $("#s-install"); if(inst) inst.onclick = async () => {
     if(!deferredPrompt) return toast("غير متوفر هنا");
@@ -2173,6 +2835,8 @@ RENDER["p-set:after"] = () => {
   };
 };
 
+$("#hd-lang").addEventListener("click", toggleLang);
+$("#au-lang").addEventListener("click", toggleLang);
 $("#hd-user").addEventListener("click", () => go("p-set"));
 $("#hd-bell").addEventListener("click", () => {
   const low = lowList(), dlc = dlcList();
@@ -2272,9 +2936,9 @@ async function dailyAlerts(){
   if(low.length) parts.push(`${low.length} سلعة قربت توفى`);
   if(dlc.length) parts.push(`${dlc.length} سلعة قربت صلوحيتها`);
   const r = swReg || await navigator.serviceWorker.ready.catch(() => null);
-  const opt = { body: parts.join(" · ") + " — شوف المخزون", icon:"icons/icon-192.png", badge:"icons/icon-192.png",
+  const opt = { body: trText(parts.join(" · ") + " — شوف المخزون"), icon:"icons/icon-192.png", badge:"icons/icon-192.png",
                 tag:"mb-stock", vibrate:[60,40,60], data:{ page:"p-stock" } };
-  if(r) r.showNotification("مزرعة البركة", opt); else new Notification("مزرعة البركة", opt);
+  if(r) r.showNotification(trText("مزرعة البركة"), opt); else new Notification(trText("مزرعة البركة"), opt);
 }
 function paintBell(){
   const t = $("#hd-title"); if(t && S.set.shop) t.textContent = S.set.shop;
@@ -2289,6 +2953,7 @@ function paintBell(){
    22) DÉMARRAGE
    ============================================================ */
 (async function boot(){
+  watchLang(); applyLang();
   buildNav();
   try{ await initFirebase(); }
   catch(e){
