@@ -232,8 +232,8 @@ nav button.on svg{stroke-width:2.4}
 .cart-line:last-child{border:none}
 .cart-line .bd{flex:1;min-width:0}
 .qty{display:flex;align-items:center;gap:0;background:var(--g100);border-radius:11px;overflow:hidden;flex:0 0 auto}
-.qty button{width:32px;height:32px;color:var(--g800);font-size:17px;font-weight:800;display:grid;place-items:center}
-.qty input{width:52px;text-align:center;background:transparent;border:none;font-weight:800;font-size:13.5px;padding:0}
+.qty button{width:38px;height:38px;color:var(--g800);font-size:17px;font-weight:800;display:grid;place-items:center}
+.qty input{width:58px;text-align:center;background:transparent;border:none;font-weight:800;font-size:13.5px;padding:0}
 .tot-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
 .tot-row.big{font-size:19px;font-weight:900;color:var(--g800);border-top:1.5px dashed var(--line);margin-top:6px;padding-top:11px}
 
@@ -294,6 +294,22 @@ nav button.on svg{stroke-width:2.4}
     transform:translateY(-50%);max-height:88dvh;padding:8px 22px 22px}
   @keyframes up{from{opacity:0;transform:translateY(-46%)}to{opacity:1;transform:translateY(-50%)}}
 }
+
+/* ---------- saisie tactile ---------- */
+.qbig{display:flex;align-items:center;gap:8px;background:var(--g100);border-radius:15px;padding:6px}
+.qbig button{width:54px;height:54px;flex:0 0 auto;border-radius:12px;background:var(--surface);
+  color:var(--g800);font-size:27px;font-weight:900;display:grid;place-items:center;box-shadow:var(--sh)}
+.qbig button:active{background:var(--g100)}
+.qbig input{flex:1;min-width:0;background:transparent;border:none;text-align:center;
+  font-size:25px;font-weight:900;color:var(--ink);padding:0}
+.chips-ed{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.ctag{display:inline-flex;align-items:center;gap:7px;background:var(--g100);color:var(--g800);
+  border-radius:999px;padding:7px 11px;font-size:13px;font-weight:700}
+.ctag button{width:23px;height:23px;flex:0 0 auto;border-radius:50%;background:var(--surface);
+  color:var(--danger);font-size:12px;font-weight:900;display:grid;place-items:center}
+.addrow{display:flex;gap:8px;align-items:center}
+.addrow .inp{flex:1;min-width:0}
+.addrow .btn{flex:0 0 auto;white-space:nowrap}
 
 /* ---------- direction / langue ---------- */
 .tl{text-align:left}
@@ -440,8 +456,9 @@ const FIREBASE_CONFIG = {
   appId:             "1:756339011743:web:00e2363458167bd6d5f2aa",
   measurementId:     "G-2MQZ6LF229"
 };
-const VAPID_KEY = "BPYGu8Wa9ao7nbDw2CN5g5nMdCFCVMOlm2nARio98BwSS1WensMQh8hiQekHrPyNMoAlJqMMoqtiAghau9wYK4s";
-const APP_VERSION = "1.2.0";           
+/* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
+const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
+const APP_VERSION = "1.2.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -449,9 +466,14 @@ const APP_VERSION = "1.2.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-const num = v => { const n = parseFloat(String(v ?? "").replace(",", ".")); return isNaN(n) ? 0 : n; };
+const num = v => { const n = parseFloat(String(v ?? "").replace(/[\s\u066C\u00A0]/g, "").replace(/[,\u066B]/, ".")); return isNaN(n) ? 0 : n; };
 
 const I18N = {
+"المنتجات القديمة تبقى على صنفها":"|Les produits gardent leur catégorie",
+"زيد سلعة أخرى":"أضف مادة أخرى|Ajouter un autre article",
+"هذا الصنف موجود":"|Cette catégorie existe déjà",
+"حذف الصنف":"|Supprimer la catégorie",
+"صنف جديد":"|Nouvelle catégorie",
 "على iPhone":"|Sur iPhone",
 "شارك":"مشاركة|Partager",
 "باش نزيدو ~14 منتج شائع (دجاج، بيض، أجبان…) تنجم تبدّلهم أو تحذفهم بعد.":"سنضيف ~14 منتجا شائعا (دجاج، بيض، أجبان…) يمكنك تعديلها أو حذفها لاحقا.|Nous allons ajouter ~14 produits courants (poulet, œufs, fromages…). Vous pourrez les modifier ou les supprimer ensuite.",
@@ -1109,9 +1131,23 @@ function sheet(title, body, onMount){
   localize($("#sheet-body"));
   $("#sheet").classList.add("on");
   document.body.style.overflow = "hidden";
+  if(!SHEET_H){ SHEET_H = true; try{ history.pushState({ page:S.page, sh:1 }, "", location.hash); }catch(e){} }
   onMount && onMount();
 }
-function closeSheet(){ $("#sheet").classList.remove("on"); document.body.style.overflow = ""; }
+function closeSheet(){
+  $("#sheet").classList.remove("on"); document.body.style.overflow = "";
+  if(SHEET_H){ SHEET_H = false;
+    try{ if(history.state && history.state.sh) history.back(); }catch(e){} }
+}
+/* bouton « retour » du téléphone : ferme la feuille, sinon revient à la page précédente */
+addEventListener("popstate", e => {
+  if($("#sheet").classList.contains("on")){
+    SHEET_H = false; $("#sheet").classList.remove("on"); document.body.style.overflow = ""; return;
+  }
+  SHEET_H = false;
+  const p = (e.state && e.state.page) || location.hash.replace("#", "") || "p-dash";
+  if(p !== S.page && $("#" + p)) go(p, false);
+});
 $("#sheet .bd").addEventListener("click", closeSheet);
 document.addEventListener("keydown", e => { if(e.key === "Escape") closeSheet(); });
 
@@ -1316,14 +1352,17 @@ function buildNav(){
         ${ic(n.ic, 23)}<span>${n.main && !n.mobileOnly ? n.short : n.lb}</span></button>`).join("");
   $$("#nav button").forEach(b => b.onclick = () => go(b.dataset.go));
 }
-function go(page){
+let SHEET_H = false;
+function go(page, push = true){
   if(page === "p-more" && innerWidth >= 900) page = "p-sup";
+  const same = S.page === page;
   S.page = page;
   $$(".page").forEach(p => p.classList.toggle("on", p.id === page));
   $$("#nav button").forEach(b => b.classList.toggle("on", b.dataset.go === page));
   const n = NAV.find(x => x.id === page);
   $("#hd-sub").textContent = n ? n.lb : "";
-  try{ history.replaceState(null, "", "#" + page); }catch(e){}
+  try{ (push && !same) ? history.pushState({ page }, "", "#" + page)
+                       : history.replaceState({ page }, "", "#" + page); }catch(e){}
   $("#cart-bar").classList.toggle("hidden", !(page === "p-pos" && CART.length));
   render(page);
   document.querySelector("main").scrollTo?.({ top:0 });
@@ -1539,7 +1578,9 @@ function askQty(p){
     <div class="csub" style="color:var(--mute);font-size:12.5px;margin-bottom:12px">
       السعر ${money(p.price)} د.ت / ${esc(p.unit)} — المتوفر ${qtyF(p.qty || 0)}</div>
     <div class="field"><label>الكمية (${esc(p.unit)})</label>
-      <input id="q-in" class="inp" type="number" step="0.001" inputmode="decimal" value="1" dir="ltr" style="font-size:22px;text-align:center;font-weight:800"></div>
+      <div class="qbig"><button type="button" data-qs="-1">−</button>
+        <input id="q-in" type="text" inputmode="decimal" value="1" dir="ltr">
+        <button type="button" data-qs="1">+</button></div></div>
     <div class="grid3" style="margin-bottom:6px">
       ${[0.5,1,1.5,2,2.5,3].map(v => `<button class="btn line sm" data-q="${v}">${v}</button>`).join("")}</div>
     <div class="tot-row big"><span>المجموع</span><span id="q-tot">${DT(p.price)}</span></div>
@@ -1548,6 +1589,11 @@ function askQty(p){
     const inp = $("#q-in"); inp.focus(); inp.select();
     const upd8 = () => $("#q-tot").innerHTML = DT(num(inp.value) * (p.price || 0));
     inp.oninput = upd8;
+    const st = /كغ|لتر|kg|L/i.test(p.unit || "") ? 0.5 : 1;
+    $$("#sheet-body [data-qs]").forEach(b => b.onclick = () => {
+      inp.value = qtyF(Math.max(0, Math.round((num(inp.value) + Number(b.dataset.qs) * st) * 1000) / 1000));
+      upd8();
+    });
     $$("#sheet-body [data-q]").forEach(b => b.onclick = () => { inp.value = b.dataset.q; upd8(); });
     $("#q-ok").onclick = () => { const q = num(inp.value); if(q <= 0) return toast("الكمية لازم أكبر من 0"); closeSheet(); addToCart(p, q); };
     inp.onkeydown = e => e.key === "Enter" && $("#q-ok").click();
@@ -1563,8 +1609,9 @@ function openCart(){
   const clients = S.clients.slice().sort((a, b) => (a.name || "").localeCompare(b.name));
   sheet("إتمام البيع", `
     <div id="cart-lines">${cartLines()}</div>
+    <button class="btn line block sm" data-act="close" style="margin-top:10px">${ic("plus",15)} زيد سلعة أخرى</button>
     <div class="grid2" style="margin-top:12px">
-      <div class="field"><label>تخفيض (د.ت)</label><input id="c-rem" class="inp" type="number" step="0.1" inputmode="decimal" value="0" dir="ltr"></div>
+      <div class="field"><label>تخفيض (د.ت)</label><input id="c-rem" class="inp" type="text" inputmode="decimal" value="0" dir="ltr"></div>
       <div class="field"><label>طريقة الخلاص</label>
         <select id="c-mode" class="inp">${Object.entries(MODES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
     </div>
@@ -1610,7 +1657,7 @@ const cartLines = () => CART.map((l, i) => `<div class="cart-line">
   <div class="bd"><div class="nm" style="font-weight:700;font-size:14px">${esc(l.name)}</div>
     <div class="mt" style="font-size:11.5px;color:var(--mute)">${money(l.price)} د.ت / ${esc(l.unit)} = <b>${money(l.qty * l.price)}</b></div></div>
   <div class="qty"><button data-cl="-" data-i="${i}">−</button>
-    <input type="number" step="0.001" inputmode="decimal" data-i="${i}" value="${qtyF(l.qty)}" dir="ltr">
+    <input type="text" inputmode="decimal" data-i="${i}" value="${qtyF(l.qty)}" dir="ltr">
     <button data-cl="+" data-i="${i}">+</button></div>
   <button class="icon-btn dark" style="width:34px;height:34px" data-cl="x" data-i="${i}">${ic("x",16)}</button>
 </div>`).join("");
@@ -1744,12 +1791,12 @@ function prodForm(p){
       <div class="field"><label>الوحدة</label><select id="f-unit" class="inp">${UNITS.map(u => `<option ${p.unit === u ? "selected" : ""}>${u}</option>`).join("")}</select></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>سعر الشراء</label><input id="f-cost" class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" value="${p.cost || 0}"></div>
-      <div class="field"><label>سعر البيع *</label><input id="f-price" class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" value="${p.price || 0}"></div>
+      <div class="field"><label>سعر الشراء</label><input id="f-cost" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.cost || 0}"></div>
+      <div class="field"><label>سعر البيع *</label><input id="f-price" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.price || 0}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>الكمية الحالية</label><input id="f-qty" class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" value="${p.qty || 0}" ${isNew ? "" : "readonly style=background:#EFF2EE"}></div>
-      <div class="field"><label>حد التنبيه</label><input id="f-min" class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" value="${p.min ?? S.set.lowStock}"></div>
+      <div class="field"><label>الكمية الحالية</label><input id="f-qty" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.qty || 0}" ${isNew ? "" : "readonly style=background:#EFF2EE"}></div>
+      <div class="field"><label>حد التنبيه</label><input id="f-min" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.min ?? S.set.lowStock}"></div>
     </div>
     <div class="grid2">
       <div class="field"><label>تاريخ الصلوحية</label><input id="f-dlc" class="inp" type="date" dir="ltr" value="${p.dlc || ""}"></div>
@@ -1817,7 +1864,7 @@ ACT["prod-qty"] = id => {
   sheet("تعديل كمية — " + esc(p.name), `
     <div class="tabs"><button class="on" data-m="add">➕ زيادة</button><button data-m="sub">➖ نقصان</button><button data-m="set">🎯 جرد</button></div>
     <div class="field"><label id="q-lb">الكمية اللي باش تزيد (${esc(p.unit)})</label>
-      <input id="q-v" class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" value="" style="font-size:20px;text-align:center;font-weight:800"></div>
+      <input id="q-v" class="inp" type="text" inputmode="decimal" dir="ltr" value="" style="font-size:20px;text-align:center;font-weight:800"></div>
     <div class="field"><label>السبب</label>
       <select id="q-r" class="inp"><option>وصول بضاعة</option><option>جرد / تصحيح</option><option>تالف / كسر</option><option>استهلاك ذاتي</option><option>إرجاع حريف</option><option>أخرى</option></select></div>
     <div class="hint">الكمية الحالية : <b>${qtyF(p.qty || 0)} ${esc(p.unit)}</b></div>
@@ -1904,7 +1951,7 @@ function cashForm(type){
   const cats = type === "out" ? S.set.expCats : ["مبيعات","خلاص حريف","إيداع","أخرى"];
   sheet(type === "out" ? "مصروف جديد" : "مدخول جديد", `
     <div class="field"><label>المبلغ (د.ت) *</label>
-      <input id="c-amt" class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" style="font-size:22px;text-align:center;font-weight:800" placeholder="0.000"></div>
+      <input id="c-amt" class="inp" type="text" inputmode="decimal" dir="ltr" style="font-size:22px;text-align:center;font-weight:800" placeholder="0.000"></div>
     <div class="field"><label>النوع</label><select id="c-cat" class="inp">${cats.map(c => `<option>${esc(c)}</option>`).join("")}</select></div>
     <div class="field"><label>الوصف</label><input id="c-lab" class="inp" placeholder="مثال : خلاص فاتورة الضوء"></div>
     <div class="field"><label>التاريخ</label><input id="c-date" class="inp" type="date" dir="ltr" value="${todayKey()}"></div>
@@ -2000,7 +2047,7 @@ function partyForm(kind, p, after){
     <div class="grid2">
       <div class="field"><label>المعرف الجبائي</label><input id="p-mf" class="inp" dir="ltr" value="${esc(p.mf || "")}"></div>
       <div class="field"><label>${isNew ? "الرصيد الافتتاحي" : "الرصيد"}</label>
-        <input id="p-bal" class="inp" type="number" step="0.001" dir="ltr" value="${p.balance || 0}" ${isNew ? "" : "readonly style=background:#EFF2EE"}></div>
+        <input id="p-bal" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.balance || 0}" ${isNew ? "" : "readonly style=background:#EFF2EE"}></div>
     </div>
     <div class="field"><label>ملاحظة</label><input id="p-note" class="inp" value="${esc(p.note || "")}"></div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="p-ok">حفظ</button></div>`,
@@ -2060,7 +2107,7 @@ function payForm(kind, id){
     <div class="alert ${(p.balance || 0) > 0 ? "warn" : "ok"}"><div class="ic">${(p.balance || 0) > 0 ? "⚠️" : "✅"}</div>
       <div>الرصيد الحالي : <b>${money(p.balance || 0)} د.ت</b> ${(p.balance || 0) > 0 ? (isSup ? "(دين علينا)" : "(دين عليه)") : ""}</div></div>
     <div class="field"><label>المبلغ (د.ت) *</label>
-      <input id="y-amt" class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" value="${Math.max(0, p.balance || 0) || ""}" style="font-size:22px;text-align:center;font-weight:800"></div>
+      <input id="y-amt" class="inp" type="text" inputmode="decimal" dir="ltr" value="${Math.max(0, p.balance || 0) || ""}" style="font-size:22px;text-align:center;font-weight:800"></div>
     <div class="grid2">
       <div class="field"><label>الطريقة</label><select id="y-mode" class="inp">${Object.entries(MODES).filter(([k]) => k !== "credit").map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
       <div class="field"><label>التاريخ</label><input id="y-date" class="inp" type="date" dir="ltr" value="${todayKey()}"></div>
@@ -2120,7 +2167,7 @@ function buySheet(){
     <button class="btn line block sm" id="b-addline" style="margin-top:8px">${ic("plus",15)} زيد سلعة</button>
     <div class="tot-row big"><span>المجموع</span><span id="b-tot">${DT(0)}</span></div>
     <div class="grid2" style="margin-top:10px">
-      <div class="field"><label>المبلغ المخلّص</label><input id="b-paid" class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" value="0"></div>
+      <div class="field"><label>المبلغ المخلّص</label><input id="b-paid" class="inp" type="text" inputmode="decimal" dir="ltr" value="0"></div>
       <div class="field"><label>الباقي (دين)</label><input id="b-rest" class="inp" dir="ltr" readonly style="background:#EFF2EE" value="0.000"></div>
     </div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="b-ok">${ic("save",16)} تسجيل الوصل</button></div>`,
@@ -2132,11 +2179,11 @@ function buySheet(){
             ${S.products.map(p => `<option value="${p.id}" ${l.id === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></div>
           <div class="grid3" style="gap:7px">
             <div><label style="font-size:11px;color:var(--mute)">الكمية</label>
-              <input class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" data-bl="q" data-i="${i}" value="${l.qty}"></div>
+              <input class="inp" type="text" inputmode="decimal" dir="ltr" data-bl="q" data-i="${i}" value="${l.qty}"></div>
             <div><label style="font-size:11px;color:var(--mute)">سعر الشراء</label>
-              <input class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" data-bl="c" data-i="${i}" value="${l.cost}"></div>
+              <input class="inp" type="text" inputmode="decimal" dir="ltr" data-bl="c" data-i="${i}" value="${l.cost}"></div>
             <div><label style="font-size:11px;color:var(--mute)">سعر البيع</label>
-              <input class="inp" type="number" step="0.001" inputmode="decimal" dir="ltr" data-bl="s" data-i="${i}" value="${l.price}"></div>
+              <input class="inp" type="text" inputmode="decimal" dir="ltr" data-bl="s" data-i="${i}" value="${l.price}"></div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
             <b>${DT(l.qty * l.cost)}</b>
@@ -2377,7 +2424,7 @@ function docForm(type, existing){
   DOC.type = type;
   sheet((existing ? "تعديل " : "") + (type === "facture" ? "فاتورة" : "عرض سعر"), `
     <div class="grid2">
-      <div class="field"><label>الرقم</label><input id="d-no" class="inp" type="number" dir="ltr" value="${DOC.no}"></div>
+      <div class="field"><label>الرقم</label><input id="d-no" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.no}"></div>
       <div class="field"><label>التاريخ</label><input id="d-date" class="inp" type="date" dir="ltr" value="${DOC.date}"></div>
     </div>
     <div class="field"><label>الحريف</label>
@@ -2395,9 +2442,9 @@ function docForm(type, existing){
       <button class="btn line sm" id="d-addf">${ic("plus",15)} سطر حر</button>
     </div>
     <div class="grid3" style="margin-top:12px">
-      <div class="field"><label>تخفيض %</label><input id="d-rem" class="inp" type="number" step="0.5" dir="ltr" value="${DOC.remise}"></div>
-      <div class="field"><label>الأداء %</label><input id="d-tva" class="inp" type="number" step="1" dir="ltr" value="${DOC.tva}"></div>
-      <div class="field"><label>الطابع</label><input id="d-tim" class="inp" type="number" step="0.1" dir="ltr" value="${DOC.timbre}" ${type === "devis" ? "disabled" : ""}></div>
+      <div class="field"><label>تخفيض %</label><input id="d-rem" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.remise}"></div>
+      <div class="field"><label>الأداء %</label><input id="d-tva" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.tva}"></div>
+      <div class="field"><label>الطابع</label><input id="d-tim" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.timbre}" ${type === "devis" ? "disabled" : ""}></div>
     </div>
     <div id="d-tots"></div>
     <div class="field" style="margin-top:10px"><label>ملاحظة / شروط</label><textarea id="d-note" class="inp">${esc(DOC.note || "")}</textarea></div>
@@ -2422,8 +2469,8 @@ function docForm(type, existing){
         <div class="card" style="padding:10px;margin-bottom:7px">
           <input class="inp" data-dl="d" data-i="${i}" value="${esc(l.d)}" placeholder="التسمية" style="margin-bottom:7px">
           <div class="grid3" style="gap:7px;align-items:end">
-            <div><label style="font-size:11px;color:var(--mute)">الكمية</label><input class="inp" type="number" step="0.001" dir="ltr" data-dl="q" data-i="${i}" value="${l.qty}"></div>
-            <div><label style="font-size:11px;color:var(--mute)">السعر</label><input class="inp" type="number" step="0.001" dir="ltr" data-dl="p" data-i="${i}" value="${l.pu}"></div>
+            <div><label style="font-size:11px;color:var(--mute)">الكمية</label><input class="inp" type="text" inputmode="decimal" dir="ltr" data-dl="q" data-i="${i}" value="${l.qty}"></div>
+            <div><label style="font-size:11px;color:var(--mute)">السعر</label><input class="inp" type="text" inputmode="decimal" dir="ltr" data-dl="p" data-i="${i}" value="${l.pu}"></div>
             <button class="btn line sm" data-dl="x" data-i="${i}">${ic("trash",14)}</button>
           </div>
           <div class="tl" style="margin-top:6px;font-weight:800">${DT(l.qty * l.pu)}</div>
@@ -2737,22 +2784,25 @@ RENDER["p-set"] = () => {
 
   <div class="card"><h3>الفوترة والتنبيهات</h3>
     <div class="grid2">
-      <div class="field"><label>نسبة الأداء %</label><input id="s-tva" class="inp" type="number" step="1" dir="ltr" value="${st.tva}"></div>
-      <div class="field"><label>الطابع الجبائي</label><input id="s-tim" class="inp" type="number" step="0.1" dir="ltr" value="${st.timbre}"></div>
+      <div class="field"><label>نسبة الأداء %</label><input id="s-tva" class="inp" type="text" inputmode="decimal" dir="ltr" value="${st.tva}"></div>
+      <div class="field"><label>الطابع الجبائي</label><input id="s-tim" class="inp" type="text" inputmode="decimal" dir="ltr" value="${st.timbre}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>حد التنبيه الافتراضي</label><input id="s-low" class="inp" type="number" step="1" dir="ltr" value="${st.lowStock}"></div>
-      <div class="field"><label>تنبيه الصلوحية (أيام)</label><input id="s-dlc" class="inp" type="number" step="1" dir="ltr" value="${st.dlcDays}"></div>
+      <div class="field"><label>حد التنبيه الافتراضي</label><input id="s-low" class="inp" type="text" inputmode="decimal" dir="ltr" value="${st.lowStock}"></div>
+      <div class="field"><label>تنبيه الصلوحية (أيام)</label><input id="s-dlc" class="inp" type="text" inputmode="decimal" dir="ltr" value="${st.dlcDays}"></div>
     </div>
     <button class="btn block" id="s-save2">${ic("save",16)} حفظ</button>
   </div>
 
   <div class="card"><h3>الأصناف</h3><div class="csub">أصناف المنتجات وأصناف المصاريف</div>
-    <div class="field"><label>أصناف المنتجات (افصل بفاصلة)</label>
-      <textarea id="s-cats" class="inp">${esc(st.cats.join("، "))}</textarea></div>
-    <div class="field"><label>أصناف المصاريف</label>
-      <textarea id="s-ecats" class="inp">${esc(st.expCats.join("، "))}</textarea></div>
-    <button class="btn block" id="s-save3">${ic("save",16)} حفظ</button>
+    <div class="field"><label>أصناف المنتجات</label>
+      <div class="chips-ed">${catChips(st.cats, "cats")}</div>
+      <div class="addrow"><input id="add-cats" class="inp" placeholder="صنف جديد">
+        <button class="btn sm" data-act="cat-add" data-id="cats">${ic("plus",15)} زيد</button></div></div>
+    <div class="field" style="margin-bottom:0"><label>أصناف المصاريف</label>
+      <div class="chips-ed">${catChips(st.expCats, "expCats")}</div>
+      <div class="addrow"><input id="add-expCats" class="inp" placeholder="صنف جديد">
+        <button class="btn sm" data-act="cat-add" data-id="expCats">${ic("plus",15)} زيد</button></div></div>
   </div>
 
   <div class="card"><h3>التنبيهات</h3>
@@ -2792,17 +2842,36 @@ RENDER["p-set"] = () => {
   </div>
   <div class="hint" style="text-align:center;margin:14px 0 4px">🌿 ${esc(st.shop)}${LANG === "fr" ? "" : " — " + esc(st.shopFr || "")}</div>`;
 };
+const catChips = (a, k) => (a || []).map((c, i) =>
+  `<span class="ctag">${esc(c)}<button data-act="cat-del" data-id="${k}:${i}">✕</button></span>`
+).join("") || `<span class="hint">لا شيء</span>`;
+
+ACT["cat-add"] = async k => {
+  const inp = $("#add-" + k); const val = (inp?.value || "").trim();
+  if(!val) return toast("الاسم ضروري");
+  const cur = (S.set[k] || []).slice();
+  if(cur.includes(val)) return toast("هذا الصنف موجود");
+  cur.push(val); await saveSet({ [k]: cur });
+  inp.value = ""; render("p-set"); toast("تسجّل ✓");
+};
+ACT["cat-del"] = async id => {
+  const i = id.lastIndexOf(":"), k = id.slice(0, i), n = +id.slice(i + 1);
+  const cur = (S.set[k] || []).slice(); if(!cur.length) return;
+  if(!await ask("حذف الصنف ؟", `<b>${esc(cur[n])}</b><br>المنتجات القديمة تبقى على صنفها.`, "حذف", true)) return;
+  cur.splice(n, 1); await saveSet({ [k]: cur });
+  closeSheet(); render("p-set"); toast("تنحّات ✓");
+};
+
 RENDER["p-set:after"] = () => {
   const v = s => $(s)?.value.trim();
   $("#s-save1").onclick = async () => { await saveSet({ shop:v("#s-shop") || "مزرعة البركة", shopFr:v("#s-shopfr"),
     slogan:v("#s-slog"), addr:v("#s-addr"), phone:v("#s-tel"), mf:v("#s-mf"), rib:v("#s-rib") }); toast("تسجّل ✓"); };
   $("#s-save2").onclick = async () => { await saveSet({ tva:num(v("#s-tva")), timbre:num(v("#s-tim")),
     lowStock:num(v("#s-low")), dlcDays:num(v("#s-dlc")) }); toast("تسجّل ✓"); };
-  $("#s-save3").onclick = async () => {
-    const split = s => s.split(/[،,\n]/).map(x => x.trim()).filter(Boolean);
-    await saveSet({ cats:split(v("#s-cats")), expCats:split(v("#s-ecats")) }); toast("تسجّل ✓");
-  };
+  ["cats", "expCats"].forEach(k => { const i = $("#add-" + k);
+    if(i) i.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); ACT["cat-add"](k); } }; });
   $("#s-notif").onclick = askNotif;
+
   $("#s-test").onclick = async () => {
     if(window.Notification?.permission !== "granted") return toast("فعّل التنبيهات الأول");
     const r = swReg || await navigator.serviceWorker.ready.catch(() => null);
@@ -2972,7 +3041,9 @@ function paintBell(){
       $("#app").classList.remove("hidden");
       setDot(navigator.onLine ? "ok" : "off");
       const h = location.hash.replace("#", "");
-      go(NAV.some(n => n.id === h) ? h : "p-dash");
+      const p0 = NAV.some(n => n.id === h) ? h : "p-dash";
+      try{ history.replaceState({ page:p0 }, "", "#" + p0); }catch(e){}
+      go(p0, false);
       setTimeout(dailyAlerts, 5000);
       if(window.Notification && Notification.permission === "granted") initFCM();
     }else{
