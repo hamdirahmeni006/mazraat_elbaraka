@@ -313,6 +313,17 @@ nav button.on svg{stroke-width:2.4}
   display:grid;gap:11px;justify-items:center}
 .scan .bar .t{color:#fff;font-size:13.5px;text-align:center}
 .scan .bar .btn{background:#fff;min-width:180px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);
+  padding:14px 9px;min-height:124px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:5px;box-shadow:var(--sh);text-align:center}
+.tile:active{background:var(--g100)}
+.tile .e{font-size:25px;line-height:1}
+.tile .t{font-weight:800;font-size:13.5px;line-height:1.25;color:var(--ink);overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .s{font-size:11px;color:var(--mute);line-height:1.25;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media(min-width:900px){.tiles{grid-template-columns:repeat(3,1fr)}}
 .imgbox{width:100%;height:150px;border-radius:16px;border:1.5px dashed var(--line);
   background:var(--surface-2);display:grid;place-items:center;overflow:hidden;position:relative}
 .imgbox img{width:100%;height:100%;object-fit:cover}
@@ -482,7 +493,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "2.2.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "2.3.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -493,6 +504,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&l
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[\s\u066C\u00A0]/g, "").replace(/[,\u066B]/, ".")); return isNaN(n) ? 0 : n; };
 
 const I18N = {
+"التموين":"|À commander",
 "الكود مستعمل في":"الكود مستعمَل في|Code déjà utilisé par",
 "الكود :":"|Code :",
 "قائمة التموين":"|Liste de réapprovisionnement",
@@ -3326,27 +3338,23 @@ ACT["exp-csv"] = () => {
 /* ============================================================
    19) EL MAZID — MENU SECONDAIRE
    ============================================================ */
-RENDER["p-more"] = () => `
+RENDER["p-more"] = () => {
+  const tiles = [
+    ["go", "p-sup",   "🚚", "المزودين",     `${S.suppliers.length} مزود`],
+    ["go", "p-buy",   "📥", "الشراءات",     `${S.purchases.length} وصل`],
+    ["go", "p-cli",   "👥", "الحرفاء",      `${S.clients.length} حريف`],
+    ["go", "p-doc",   "🧾", "فواتير وعروض", `${S.docs.length} وثيقة`],
+    ["go", "p-sales", "📊", "سجل المبيعات", `${S.sales.length} عملية`],
+    ["go", "p-rep",   "📈", "التقارير",     "تحليل النشاط"],
+    ["do", "restock", "🛒", "التموين",      `${restockList().length} منتج`],
+    ["do", "journal", "📦", "سجل الحركات",  `${stockJournal().length} حركة`],
+    ["go", "p-set",   "⚙️", "الإعدادات",    "الحساب والتطبيق"]   /* toujours en dernier */
+  ];
+  return `
   <div class="page-head"><div><h2>المزيد</h2><div class="sub">${esc(S.user?.email || "")}</div></div></div>
-  <div class="grid2" style="gap:10px">
-    ${[["p-sup","🚚","المزودين",`${S.suppliers.length} مزود`],
-       ["p-buy","📥","الشراءات",`${S.purchases.length} وصل`],
-       ["p-cli","👥","الحرفاء",`${S.clients.length} حريف`],
-       ["p-doc","🧾","فواتير وعروض",`${S.docs.length} وثيقة`],
-       ["p-sales","📊","سجل المبيعات",`${S.sales.length} عملية`],
-       ["p-rep","📈","التقارير","تحليل النشاط"],
-       ["p-set","⚙️","الإعدادات","الحساب والتطبيق"]]
-      .map(([id, e, t, s]) => `<button class="card" class="tr2" style="margin:0" data-go2="${id}">
-        <div style="font-size:26px">${e}</div><div style="font-weight:800;margin-top:6px">${t}</div>
-        <div style="font-size:11.5px;color:var(--mute);margin-top:2px">${s}</div></button>`).join("")}
-  </div>
-  <div class="grid2" style="gap:10px;margin-top:10px">
-    <button class="card" style="margin:0" data-act="restock"><div style="font-size:26px">🧾</div>
-      <div style="font-weight:800;margin-top:6px">قائمة التموين</div>
-      <div style="font-size:11.5px;color:var(--mute);margin-top:2px">${restockList().length} منتج</div></button>
-    <button class="card" style="margin:0" data-act="journal"><div style="font-size:26px">📦</div>
-      <div style="font-weight:800;margin-top:6px">سجل حركات المخزون</div>
-      <div style="font-size:11.5px;color:var(--mute);margin-top:2px">${stockJournal().length} حركة</div></button>
+  <div class="tiles">
+    ${tiles.map(([k, id, e, t, sb]) => `<button class="tile" ${k === "go" ? `data-go2="${id}"` : `data-act="${id}"`}>
+      <div class="e">${e}</div><div class="t">${t}</div><div class="s">${sb}</div></button>`).join("")}
   </div>
   <div class="card" style="margin-top:14px">
     <h3>ملخص سريع</h3>
@@ -3357,6 +3365,7 @@ RENDER["p-more"] = () => `
     <div class="tot-row big"><span>الرصيد الصافي</span><span>${DT(cashBal() + stockVal() + cliDebt() - supDebt())}</span></div>
   </div>
   <div class="hint" style="text-align:center;margin-top:16px">مزرعة البركة — نسخة ${APP_VERSION}</div>`;
+};
 RENDER["p-more:after"] = () => $$("#p-more [data-go2]").forEach(b => b.onclick = () => go(b.dataset.go2));
 
 /* ============================================================
