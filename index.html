@@ -467,7 +467,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "1.9.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "2.0.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -1648,6 +1648,7 @@ ACT["cart-clear"] = async () => { if(await ask("تفريغ السلة ؟","با�
 
 /* --- panier --- */
 $("#cart-open").addEventListener("click", openCart);
+let CART_PEND = null;
 function openCart(){
   if(!CART.length) return;
   const clients = S.clients.slice().sort((a, b) => (a.name || "").localeCompare(b.name));
@@ -1678,8 +1679,11 @@ function openCart(){
     $("#c-mode").onchange = e => {
       $("#c-cli-wrap").classList.toggle("hidden", e.target.value !== "credit");
     };
-    $("#c-cli").onchange = async e => {
-      if(e.target.value === "__new"){ e.target.value = ""; closeSheet(); newClient(() => openCart()); }
+    $("#c-cli").onchange = e => {
+      if(e.target.value !== "__new") return;
+      e.target.value = "";
+      CART_PEND = { rem:$("#c-rem").value, mode:$("#c-mode").value, pr:$("#c-print").checked };
+      newParty("cli", (id, d) => { CART_PEND.cli = id; CART_PEND.name = d?.name || ""; openCart(); });
     };
     $("#cart-lines").onclick = ev => {
       const b = ev.target.closest("[data-cl]"); if(!b) return;
@@ -1694,6 +1698,15 @@ function openCart(){
       const inp = ev.target.closest("input[data-i]"); if(!inp) return;
       CART[+inp.dataset.i].qty = num(inp.value); upd8(); cartSync();
     };
+    if(CART_PEND){
+      const P = CART_PEND; CART_PEND = null;
+      $("#c-rem").value = P.rem || "0";
+      $("#c-mode").value = P.cli ? "credit" : (P.mode || "cash");
+      $("#c-print").checked = !!P.pr;
+      $("#c-cli-wrap").classList.toggle("hidden", $("#c-mode").value !== "credit");
+      if(P.cli) ensureOpt($("#c-cli"), P.cli, P.name);
+      upd8();
+    }
     $("#c-ok").onclick = doSale;
   });
 }
@@ -1857,8 +1870,8 @@ function pickImage(cb){
   i.click();
 }
 
-function prodForm(p){
-  const isNew = !p;
+function prodForm(p, forceNew){
+  const isNew = forceNew === undefined ? !p : forceNew;
   p = p || { cat:S.set.cats[0], unit:"كغ", qty:0, min:S.set.lowStock, cost:0, price:0 };
   sheet(isNew ? "منتج جديد" : "تعديل المنتج", `
     <div class="field"><label>صورة المنتج</label>
@@ -1886,7 +1899,8 @@ function prodForm(p){
     <div class="grid2">
       <div class="field"><label>تاريخ الصلوحية</label><input id="f-dlc" class="inp" type="date" dir="ltr" value="${p.dlc || ""}"></div>
       <div class="field"><label>المزود</label><select id="f-sup" class="inp"><option value="">—</option>
-        ${S.suppliers.map(s => `<option value="${s.id}" ${p.supplierId === s.id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></div>
+        ${S.suppliers.map(s => `<option value="${s.id}" ${p.supplierId === s.id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}
+        <option value="__new">➕ مزود جديد…</option></select></div>
     </div>
     <div class="field"><label>كود / باركود (اختياري)</label><input id="f-code" class="inp" dir="ltr" value="${esc(p.code || "")}"></div>
     ${isNew ? "" : `<div class="hint">الكمية تتبدّل عن طريق «تعديل الكمية» أو الشراءات، باش يتسجّل كل شي.</div>`}
@@ -1897,6 +1911,16 @@ function prodForm(p){
       $("#f-imgbox").innerHTML = IMG ? `<img src="${esc(IMG)}" alt="">` : `<span class="ph">📷</span>`;
     };
     $("#f-imgpick").onclick = () => pickImage(d => { IMG = d; paint(); });
+    const draft = () => ({ ...p, name:$("#f-name").value, nameFr:$("#f-namefr").value, img:IMG,
+      cat:$("#f-cat").value, unit:$("#f-unit").value, cost:num($("#f-cost").value),
+      price:num($("#f-price").value), qty:num($("#f-qty").value), min:num($("#f-min").value),
+      dlc:$("#f-dlc").value, supplierId:$("#f-sup").value, code:$("#f-code").value });
+    $("#f-sup").onchange = e => {
+      if(e.target.value !== "__new") return;
+      e.target.value = p.supplierId || "";
+      const d = draft();
+      newParty("sup", (id, nd) => { prodForm({ ...d, supplierId:id }, isNew); ensureOpt($("#f-sup"), id, nd?.name); });
+    };
     $("#f-imgdel").onclick  = () => { IMG = ""; paint(); };
     $("#f-ok").onclick = async () => {
       const d = {
@@ -2160,14 +2184,24 @@ function partyForm(kind, p, after){
       if(!d.name) return toast("الاسم ضروري");
       closeSheet();
       const c = kind === "sup" ? "suppliers" : "clients";
-      if(isNew){ d.balance = num($("#p-bal").value); await add(c, d); toast("تسجّل ✓"); }
+      let nid = p.id || "";
+      if(isNew){ d.balance = num($("#p-bal").value); const r = await add(c, d); nid = r?.id || ""; toast("تسجّل ✓"); }
       else await upd(c, p.id, d);
-      after && after();
+      after && after(nid, d);
     };
   });
 }
 ACT["sup-new"] = () => partyForm("sup");
 const newClient = after => partyForm("cli", null, after);
+/* « ➕ nouveau » dans n'importe quelle liste : ouvre la fiche puis revient */
+function newParty(kind, back){ closeSheet(); partyForm(kind, null, (id, d) => back(id, d)); }
+/* garantit que l'option existe même si la synchro n'a pas encore renvoyé la fiche */
+function ensureOpt(sel, id, label){
+  if(!sel || !id) return;
+  if(![...sel.options].some(o => o.value === id))
+    sel.insertAdjacentHTML("afterbegin", `<option value="${esc(id)}">${esc(label || id)}</option>`);
+  sel.value = id;
+}
 
 ACT["sup-view"] = id => {
   const s = S.suppliers.find(x => x.id === id); if(!s) return;
@@ -2315,7 +2349,15 @@ function buySheet(){
       $("#b-tot").innerHTML = DT(t);
       $("#b-rest").value = money(Math.max(0, t - num($("#b-paid").value)));
     };
-    $("#b-sup").onchange = e => { if(e.target.value === "__new"){ e.target.value = ""; closeSheet(); partyForm("sup", null, () => buySheet()); } else BUY.supplierId = e.target.value; };
+    $("#b-sup").onchange = e => {
+      if(e.target.value === "__new"){
+        e.target.value = BUY.supplierId || "";
+        BUY.paid = num($("#b-paid").value); BUY.date = $("#b-date").value || BUY.date;
+        newParty("sup", (id, d) => { BUY.supplierId = id; buySheet(); ensureOpt($("#b-sup"), id, d?.name); });
+        return;
+      }
+      BUY.supplierId = e.target.value;
+    };
     $("#b-addline").onclick = () => {
       const p = S.products[0];
       BUY.lines.push({ id:p.id, qty:1, cost:p.cost || 0, price:p.price || 0 });
@@ -2574,8 +2616,8 @@ RENDER["p-doc"] = () => {
 ACT["doc-new-f"] = () => docForm("facture");
 ACT["doc-new-d"] = () => docForm("devis");
 
-function docForm(type, existing){
-  DOC = existing ? JSON.parse(JSON.stringify(existing)) : {
+function docForm(type, existing, keep){
+  if(!keep) DOC = existing ? JSON.parse(JSON.stringify(existing)) : {
     type, no: nextNo(S.docs.filter(d => d.type === type)), date: todayKey(),
     client:{ name:"", addr:"", mf:"", phone:"" }, clientId:"",
     items:[], remise:0, tva:S.set.tva, timbre:S.set.timbre, status:"brouillon", note:""
@@ -2588,7 +2630,8 @@ function docForm(type, existing){
     </div>
     <div class="field"><label>الحريف</label>
       <select id="d-cli" class="inp"><option value="">— كتابة حرة —</option>
-        ${S.clients.map(c => `<option value="${c.id}" ${DOC.clientId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
+        ${S.clients.map(c => `<option value="${c.id}" ${DOC.clientId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}
+        <option value="__new">➕ حريف جديد…</option></select></div>
     <div class="field"><label>الاسم / الشركة *</label><input id="d-cname" class="inp" value="${esc(DOC.client.name)}"></div>
     <div class="grid2">
       <div class="field"><label>العنوان</label><input id="d-caddr" class="inp" value="${esc(DOC.client.addr || "")}"></div>
@@ -2637,7 +2680,26 @@ function docForm(type, existing){
         </div>`).join("") : `<div class="empty" style="padding:12px">زيد سطر</div>`;
       drawT();
     };
+    const snap = () => {
+      DOC.no = num($("#d-no").value) || DOC.no;
+      DOC.date = $("#d-date").value || DOC.date;
+      DOC.client = { name:$("#d-cname").value.trim(), addr:$("#d-caddr").value.trim(),
+                     mf:$("#d-cmf").value.trim(), phone:DOC.client.phone || "" };
+      DOC.note = $("#d-note").value.trim(); DOC.status = $("#d-st").value;
+      DOC.remise = num($("#d-rem").value); DOC.tva = num($("#d-tva").value); DOC.timbre = num($("#d-tim").value);
+    };
     $("#d-cli").onchange = e => {
+      if(e.target.value === "__new"){
+        e.target.value = DOC.clientId || "";
+        snap();
+        newParty("cli", (id, d) => {
+          DOC.clientId = id;
+          DOC.client = { name:d?.name || "", addr:d?.addr || "", mf:d?.mf || "", phone:d?.phone || "" };
+          docForm(type, existing, true);
+          ensureOpt($("#d-cli"), id, d?.name);
+        });
+        return;
+      }
       const c = S.clients.find(x => x.id === e.target.value);
       DOC.clientId = e.target.value;
       if(c){ $("#d-cname").value = c.name; $("#d-caddr").value = c.addr || ""; $("#d-cmf").value = c.mf || ""; }
@@ -2968,7 +3030,6 @@ RENDER["p-set"] = () => {
   const st = S.set;
   const canInstall = !!deferredPrompt;
   const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-  const perm = window.Notification ? Notification.permission : "unsupported";
   return `
   <div class="page-head"><div><h2>الإعدادات</h2><div class="sub">${esc(S.user?.email || "")}</div></div></div>
 
@@ -3009,12 +3070,6 @@ RENDER["p-set"] = () => {
   </div>
 
   <div class="card"><h3>التنبيهات</h3>
-    <div class="csub">تنبيه كي تنقص سلعة ولا تقرب الصلوحية، حتى والتطبيق مسكّر</div>
-    <div class="alert ${perm === "granted" ? "ok" : perm === "denied" ? "dan" : "info"}">
-      <div class="ic">${perm === "granted" ? "🔔" : perm === "denied" ? "🔕" : "❓"}</div>
-      <div id="fcm-msg">${perm === "granted" ? "التنبيهات مفعّلة على هذا الجهاز." :
-        perm === "denied" ? "التنبيهات ممنوعة. فعّلها من إعدادات المتصفح (🔒 بجنب العنوان)." :
-        "اضغط باش تسمح بالتنبيهات."}</div></div>
     <div class="grid2" style="gap:9px">
       <button class="btn ghost sm" id="s-notif">🔔 تفعيل التنبيهات</button>
       <button class="btn ghost sm" id="s-test">🧪 تجربة تنبيه</button>
