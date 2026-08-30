@@ -213,7 +213,8 @@ nav button.on svg{stroke-width:2.4}
 
 /* ---------- caisse / POS ---------- */
 .pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:9px}
-.pcard{background:var(--surface);border:1.5px solid var(--line);border-radius:15px;padding:10px;text-align:center;
+.favdot{position:absolute;top:5px;inset-inline-start:6px;font-size:12px;line-height:1}
+.pcard{position:relative;background:var(--surface);border:1.5px solid var(--line);border-radius:15px;padding:10px;text-align:center;
   transition:transform .12s,border-color .15s;position:relative;overflow:hidden}
 .pcard:active{transform:scale(.96)}
 .pcard .ic{font-size:23px;height:44px;display:grid;place-items:center;overflow:hidden;border-radius:12px}
@@ -304,6 +305,9 @@ nav button.on svg{stroke-width:2.4}
 .qbig button:active{background:var(--g100)}
 .qbig input{flex:1;min-width:0;background:transparent;border:none;text-align:center;
   font-size:23px;font-weight:800;color:var(--ink);padding:0}
+.scanbox{position:relative;width:100%;height:230px;border-radius:16px;overflow:hidden;background:#000}
+.scanbox video{width:100%;height:100%;object-fit:cover}
+.scanline{position:absolute;left:8%;right:8%;top:50%;height:2px;background:var(--gold);box-shadow:0 0 12px var(--gold)}
 .imgbox{width:100%;height:150px;border-radius:16px;border:1.5px dashed var(--line);
   background:var(--surface-2);display:grid;place-items:center;overflow:hidden;position:relative}
 .imgbox img{width:100%;height:100%;object-fit:cover}
@@ -467,7 +471,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "2.0.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "2.1.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -478,6 +482,52 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&l
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[\s\u066C\u00A0]/g, "").replace(/[,\u066B]/, ".")); return isNaN(n) ? 0 : n; };
 
 const I18N = {
+"قائمة التموين":"|Liste de réapprovisionnement",
+"سجل حركات المخزون":"سجلّ حركات المخزون|Journal des mouvements de stock",
+"حساب على":"محسوب على|Calculé sur",
+"لتغطية":"لتغطية|pour couvrir",
+"التكلفة التقديرية":"|Coût estimé",
+"اعمل وصل شراء":"أنشئ وصل شراء|Créer un bon d'achat",
+"سجل الحركات":"سجلّ الحركات|Journal des mouvements",
+"أدنى هامش ربح":"|Marge minimale",
+"تغطية التموين (أيام)":"|Couverture (jours)",
+"هامش ضعيف":"|Marge faible",
+"هامش":"|Marge",
+"تنبيه الهامش":"|Alerte marge",
+"سعر البيع أقل من سعر الشراء أو يساويه — باش تخسر في كل بيعة":"سعر البيع أقل من سعر الشراء أو يساويه — ستخسر في كل عملية بيع|Le prix de vente est inférieur ou égal au prix d'achat — vous perdrez à chaque vente",
+"أقل من الحد المحدّد":"|est sous le seuil fixé",
+"الهامش":"|La marge",
+"المفضّلة":"|Favoris",
+"مفضّل":"|Favori",
+"زيدو للمفضّلة":"أضفه إلى المفضّلة|Ajouter aux favoris",
+"تزاد للمفضّلة":"تمت الإضافة إلى المفضّلة|Ajouté aux favoris",
+"تنحّى من المفضّلة":"حُذف من المفضّلة|Retiré des favoris",
+"قفل الصندوق":"|Clôture de caisse",
+"آخر عمليات القفل":"|Dernières clôtures",
+"الرصيد المتوقّع":"|Solde théorique",
+"المبلغ المحسوب في الصندوق":"|Montant compté en caisse",
+"المبلغ المحسوب":"|Montant compté",
+"الفرق":"|Écart",
+"إذا كان فما فرق، باش نزيدو حركة تصحيح في الصندوق باش الرصيد يوافق الواقع":"في حال وجود فرق، ستُضاف حركة تصحيح ليطابق الرصيد الواقع|En cas d'écart, un mouvement de correction sera ajouté pour aligner le solde",
+"سجّل القفل":"|Enregistrer la clôture",
+"فرق في الصندوق":"|Écart de caisse",
+"باش نسجّلو حركة تصحيح في الصندوق":"ستُسجَّل حركة تصحيح في الصندوق|Un mouvement de correction sera enregistré",
+"تسجّل القفل":"تم تسجيل القفل|Clôture enregistrée",
+"فرق الصندوق":"|Écart de caisse",
+"تصحيح بعد قفل الصندوق":"|Correction après clôture",
+"حذف القفل":"|Supprimer la clôture",
+"حركة التصحيح في الصندوق تبقى كيما هي":"حركة التصحيح في الصندوق تبقى كما هي|Le mouvement de correction en caisse est conservé",
+"محسوب":"|Compté",
+"متوقّع":"|Théorique",
+"شارك الكشف":"|Partager le relevé",
+"قراءة الباركود":"|Lecture du code-barres",
+"وجّه الكاميرا على الباركود":"وجّه الكاميرا نحو الباركود|Dirigez la caméra vers le code-barres",
+"ما تسمحتش بالكاميرا":"لم يتم السماح بالكاميرا|Accès à la caméra refusé",
+"قراءة":"|Scanner",
+"عندك":"لديك|En stock",
+"مبيع":"|vendu",
+"طباعة":"|Imprimer",
+"شارك":"مشاركة|Partager",
 "الاسم بالفرنسية":"|Nom en français",
 "صورة المنتج":"|Photo du produit",
 "اختار صورة":"اختر صورة|Choisir une photo",
@@ -505,7 +555,6 @@ const I18N = {
 "حذف الصنف":"|Supprimer la catégorie",
 "صنف جديد":"|Nouvelle catégorie",
 "على iPhone":"|Sur iPhone",
-"شارك":"مشاركة|Partager",
 "باش نزيدو ~14 منتج شائع (دجاج، بيض، أجبان…) تنجم تبدّلهم أو تحذفهم بعد.":"سنضيف ~14 منتجا شائعا (دجاج، بيض، أجبان…) يمكنك تعديلها أو حذفها لاحقا.|Nous allons ajouter ~14 produits courants (poulet, œufs, fromages…). Vous pourrez les modifier ou les supprimer ensuite.",
 "هذا الجهاز يقبل التنبيهات حتى والتطبيق مسكّر":"هذا الجهاز يستقبل الإشعارات حتى عند إغلاق التطبيق|Cet appareil reçoit les notifications même application fermée",
 "السلع هاذي كميتها في المخزون أقل من المطلوب":"هذه المواد كميتها في المخزون أقل من الحد المطلوب|Ces articles sont sous le seuil de stock",
@@ -949,7 +998,6 @@ const I18N = {
 "صندوق":"|Caisse",
 "صيانة":"|Entretien",
 "ضرائب":"|Impôts",
-"طباعة":"|Imprimer",
 "عملية":"|Opération",
 "كريدي":"دين|Crédit",
 "للدين":"|pour la dette",
@@ -989,7 +1037,6 @@ const I18N = {
 "شراء":"|Achat",
 "شروط":"|Conditions",
 "علبة":"|Boîte",
-"عندك":"لديك|Vous avez",
 "فيلي":"|Filet",
 "قطعة":"|Pièce",
 "كراء":"|Loyer",
@@ -1237,14 +1284,14 @@ const DEF_SET = {
   shop:"مزرعة البركة", shopFr:"Mazraat El Baraka",
   slogan:"دواجن • بيض • أجبان ومشتقات • توابل",
   addr:"", phone:"", mf:"", rib:"",
-  tva:19, timbre:1, lowStock:5, dlcDays:5,
+  tva:19, timbre:1, lowStock:5, dlcDays:5, minMarge:10, restockDays:7, lookDays:15,
   cats:["دواجن","بيض","أجبان ومشتقات","مرينات","مجمدات","شاركوتري","توابل","أخرى"],
   expCats:["كهرباء وماء","كراء","نقل ووقود","أجور","صيانة","ضرائب","متفرقة"],
   notif:true
 };
 const S = {
   set:{ ...DEF_SET }, user:null,
-  products:[], sales:[], cash:[], suppliers:[], clients:[], purchases:[], docs:[],
+  products:[], sales:[], cash:[], suppliers:[], clients:[], purchases:[], docs:[], moves:[], closings:[],
   ready:{}, page:"p-dash"
 };
 let CART = [];
@@ -1309,6 +1356,8 @@ function startSubs(){
   sub("cash",      fb.query(col("cash"),      fb.orderBy("ts","desc"), fb.limit(700)), "cash");
   sub("purchases", fb.query(col("purchases"), fb.orderBy("ts","desc"), fb.limit(300)), "purchases");
   sub("docs",      fb.query(col("docs"),      fb.orderBy("ts","desc"), fb.limit(300)), "docs");
+  sub("moves",     fb.query(col("moves"),     fb.orderBy("ts","desc"), fb.limit(400)), "moves");
+  sub("closings",  fb.query(col("closings"),  fb.orderBy("ts","desc"), fb.limit(60)),  "closings");
   SUBS.push(fb.onSnapshot(ref("meta","settings"), s => {
     if(s.exists()) S.set = { ...DEF_SET, ...s.data() };
     else fb.setDoc(ref("meta","settings"), DEF_SET).catch(() => {});
@@ -1426,6 +1475,18 @@ document.addEventListener("click", e => {
    7) CALCULS
    ============================================================ */
 const prod = id => S.products.find(p => p.id === id);
+/* marge en % ; -1 si le prix d'achat est inconnu */
+const margePct = p => (p && p.cost > 0) ? Math.round(((p.price - p.cost) / p.cost) * 100) : -1;
+const thinMarge = p => p && p.cost > 0 && p.price > 0 && margePct(p) < (S.set.minMarge ?? 10);
+const thinList  = () => S.products.filter(thinMarge);
+
+/* partage : Web Share si possible, sinon WhatsApp */
+function shareText(title, text){
+  const t = trText(text);
+  if(navigator.share) return navigator.share({ title:trText(title), text:t }).catch(() => {});
+  const u = "https://wa.me/?text=" + encodeURIComponent(t);
+  window.open(u, "_blank", "noopener");
+}
 const sumBy = (a, f) => a.reduce((s, x) => s + (Number(f(x)) || 0), 0);
 const between = (k, a, b) => k >= a && k <= b;
 
@@ -1559,11 +1620,12 @@ const hit = (p, q) => !q || [p.name, p.nameFr, p.code, p.cat]
 const nextNo = arr => (arr.reduce((m, x) => Math.max(m, Number(x.no) || 0), 0)) + 1;
 
 RENDER["p-pos"] = () => {
-  const cats = ["الكل", ...S.set.cats];
+  const cats = ["الكل", ...(S.products.some(p => p.fav) ? ["⭐"] : []), ...S.set.cats];
   const q = POS.q.trim().toLowerCase();
   const list = S.products.filter(p =>
-    (POS.cat === "الكل" || p.cat === POS.cat) &&
-    hit(p, q));
+    (POS.cat === "الكل" || (POS.cat === "⭐" ? p.fav : p.cat === POS.cat)) &&
+    hit(p, q))
+    .sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
 
   return `
   <div class="page-head"><div><h2>نقطة البيع</h2><div class="sub">اضغط على السلعة باش تزيدها للسلة</div></div>
@@ -1571,12 +1633,14 @@ RENDER["p-pos"] = () => {
   <div class="tools">
     <div class="search"><span class="si">${ic("search",17)}</span>
       <input id="pos-q" placeholder="لوج على سلعة…" value="${esc(POS.q)}"></div>
+    <button class="icon-btn dark" data-act="scan-pos" title="قراءة الباركود">📷</button>
     <button class="icon-btn dark" data-act="prod-new" title="منتج جديد">${ic("plus",19)}</button>
   </div>
-  <div class="chips">${cats.map(c => `<button class="chip ${POS.cat === c ? "on" : ""}" data-act="pos-cat" data-id="${esc(c)}">${c === "الكل" ? "الكل" : catIc(c) + " " + esc(c)}</button>`).join("")}</div>
+  <div class="chips">${cats.map(c => `<button class="chip ${POS.cat === c ? "on" : ""}" data-act="pos-cat" data-id="${esc(c)}">${c === "الكل" ? "الكل" : c === "⭐" ? "⭐ المفضّلة" : catIc(c) + " " + esc(c)}</button>`).join("")}</div>
   ${list.length ? `<div class="pos-grid">${list.map(p => {
       const st = p.qty || 0, low = st <= (p.min ?? S.set.lowStock);
       return `<button class="pcard ${st <= 0 ? "out" : low ? "low" : ""}" data-act="pos-add" data-id="${p.id}">
+        ${p.fav ? `<span class="favdot">⭐</span>` : ""}
         <div class="ic">${p.img ? `<img class="pimg" src="${esc(p.img)}" alt="">` : catIc(p.cat)}</div>
         <div class="nm">${esc(pn(p))}</div>
         <div class="pr">${money(p.price)} د.ت</div>
@@ -1790,8 +1854,10 @@ function printTicket(s){
 let STK = { q:"", cat:"الكل", sort:"name" };
 RENDER["p-stock"] = () => {
   const q = STK.q.trim().toLowerCase();
-  let list = S.products.filter(p => (STK.cat === "الكل" || p.cat === STK.cat) && hit(p, q));
+  let list = S.products.filter(p => (["الكل","تنبيه","هامش","⭐"].includes(STK.cat) || p.cat === STK.cat) && hit(p, q));
   if(STK.cat === "تنبيه") list = lowList().concat(dlcList().filter(p => !lowList().includes(p)));
+  if(STK.cat === "هامش")  list = thinList();
+  if(STK.cat === "⭐")     list = S.products.filter(p => p.fav);
   list = list.slice().sort((a, b) =>
     STK.sort === "qty" ? (a.qty || 0) - (b.qty || 0) :
     STK.sort === "val" ? (b.qty || 0) * (b.cost || 0) - (a.qty || 0) * (a.cost || 0) :
@@ -1800,6 +1866,10 @@ RENDER["p-stock"] = () => {
   return `
   <div class="page-head"><div><h2>المخزون</h2><div class="sub">${S.products.length} منتج · قيمة الشراء ${money(stockVal())} د.ت</div></div>
     <button class="btn sm" data-act="prod-new">${ic("plus",16)} منتج</button></div>
+  <div class="grid2" style="gap:9px;margin-bottom:12px">
+    <button class="btn ghost sm" data-act="restock">🧾 قائمة التموين</button>
+    <button class="btn ghost sm" data-act="journal">📦 سجل الحركات</button>
+  </div>
   <div class="kpis" style="grid-template-columns:1fr 1fr 1fr">
     <div class="kpi"><div class="lb">قيمة الشراء</div><div class="vl" style="font-size:16px">${DT(stockVal())}</div></div>
     <div class="kpi"><div class="lb">قيمة البيع</div><div class="vl" style="font-size:16px">${DT(stockSale())}</div></div>
@@ -1807,6 +1877,7 @@ RENDER["p-stock"] = () => {
   </div>
   <div class="tools">
     <div class="search"><span class="si">${ic("search",17)}</span><input id="stk-q" placeholder="لوج على منتج…" value="${esc(STK.q)}"></div>
+    <button class="icon-btn dark" data-act="scan-stk" title="قراءة الباركود">📷</button>
     <select class="inp" id="stk-sort" style="width:auto;padding:10px 30px 10px 12px">
       <option value="name" ${STK.sort === "name" ? "selected" : ""}>ترتيب أبجدي</option>
       <option value="qty"  ${STK.sort === "qty"  ? "selected" : ""}>الأقل كمية</option>
@@ -1815,6 +1886,8 @@ RENDER["p-stock"] = () => {
   <div class="chips">
     <button class="chip ${STK.cat === "الكل" ? "on" : ""}" data-act="stk-cat" data-id="الكل">الكل</button>
     <button class="chip ${STK.cat === "تنبيه" ? "on" : ""}" data-act="stk-cat" data-id="تنبيه">⚠️ تنبيهات (${alertCount()})</button>
+    <button class="chip ${STK.cat === "هامش" ? "on" : ""}" data-act="stk-cat" data-id="هامش">📉 هامش ضعيف (${thinList().length})</button>
+    <button class="chip ${STK.cat === "⭐" ? "on" : ""}" data-act="stk-cat" data-id="⭐">⭐ المفضّلة</button>
     ${S.set.cats.map(c => `<button class="chip ${STK.cat === c ? "on" : ""}" data-act="stk-cat" data-id="${esc(c)}">${catIc(c)} ${esc(c)}</button>`).join("")}
   </div>
   ${list.length ? `<div class="list">${list.map(p => {
@@ -1824,7 +1897,8 @@ RENDER["p-stock"] = () => {
       <div class="av">${p.img ? `<img class="pimg" src="${esc(p.img)}" alt="">` : catIc(p.cat)}</div>
       <div class="bd"><div class="nm">${esc(pn(p))}</div>
         <div class="mt">${money(p.price)} د.ت / ${esc(p.unit || "")} · شراء ${money(p.cost)} 
-          ${low ? '<span class="tag gold">كمية ضعيفة</span>' : ""} ${dlcSoon ? '<span class="tag dan">صلوحية ' + dfr(p.dlc) + "</span>" : ""}</div></div>
+          ${low ? '<span class="tag gold">كمية ضعيفة</span>' : ""} ${dlcSoon ? '<span class="tag dan">صلوحية ' + dfr(p.dlc) + "</span>" : ""}
+          ${thinMarge(p) ? `<span class="tag dan">📉 هامش ${margePct(p)}%</span>` : ""}${p.fav ? " ⭐" : ""}</div></div>
       <div class="rt"><div class="amt ${low ? "neg" : ""}">${qtyF(p.qty || 0)}</div><div class="mt">${esc(p.unit || "")}</div></div>
     </div>`; }).join("")}</div>`
   : `<div class="empty"><div class="ic">📦</div>ما فماش منتجات هنا<br>
@@ -1837,6 +1911,47 @@ RENDER["p-stock:after"] = () => {
 ACT["stk-cat"] = c => { STK.cat = c; render("p-stock"); };
 
 /* ---- photo produit : redimensionnée avant enregistrement ---- */
+/* ---- lecture de code-barres via l'appareil photo ---- */
+const canScan = () => !!(window.BarcodeDetector && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+function scanCode(cb){
+  if(!canScan()) return toast("غير متوفر على هذا الجهاز");
+  let stream = null, stop = false;
+  sheet("قراءة الباركود", `
+    <div class="scanbox"><video id="sc-v" playsinline muted></video><div class="scanline"></div></div>
+    <div class="hint">وجّه الكاميرا على الباركود.</div>
+    <div class="foot"><button class="btn line" data-act="close">إلغاء</button></div>`,
+  async () => {
+    const v = $("#sc-v");
+    const shut = () => { stop = true; if(stream) stream.getTracks().forEach(t => t.stop()); stream = null; };
+    const obs = new MutationObserver(() => { if(!document.body.contains(v)){ shut(); obs.disconnect(); } });
+    obs.observe(document.body, { childList:true, subtree:true });
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
+      v.srcObject = stream; await v.play();
+    }catch(e){ shut(); closeSheet(); return toast("ما تسمحتش بالكاميرا"); }
+    const det = new BarcodeDetector();
+    const loop = async () => {
+      if(stop) return;
+      try{
+        const r = await det.detect(v);
+        if(r && r.length){ shut(); obs.disconnect(); closeSheet(); return cb(String(r[0].rawValue || "").trim()); }
+      }catch(e){}
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  });
+}
+ACT["scan-pos"] = () => scanCode(code => {
+  const p = S.products.find(x => (x.code || "").trim() === code);
+  if(!p){ POS.q = code; render("p-pos"); return toast("ما فماش سلعة بهذا الاسم"); }
+  askQty(p);
+});
+ACT["scan-stk"] = () => scanCode(code => {
+  const p = S.products.find(x => (x.code || "").trim() === code);
+  if(!p){ STK.q = code; render("p-stock"); return toast("ما فماش سلعة بهذا الاسم"); }
+  ACT["prod-view"](p.id);
+});
+
 function shrinkImage(file, max = 256, q = .65){
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -1902,7 +2017,9 @@ function prodForm(p, forceNew){
         ${S.suppliers.map(s => `<option value="${s.id}" ${p.supplierId === s.id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}
         <option value="__new">➕ مزود جديد…</option></select></div>
     </div>
-    <div class="field"><label>كود / باركود (اختياري)</label><input id="f-code" class="inp" dir="ltr" value="${esc(p.code || "")}"></div>
+    <div class="field"><label>كود / باركود (اختياري)</label>
+      <div class="addrow"><input id="f-code" class="inp" dir="ltr" value="${esc(p.code || "")}">
+        <button class="btn line sm" id="f-scan">📷 قراءة</button></div></div>
     ${isNew ? "" : `<div class="hint">الكمية تتبدّل عن طريق «تعديل الكمية» أو الشراءات، باش يتسجّل كل شي.</div>`}
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="f-ok">${ic("save",17)} حفظ</button></div>`,
   () => {
@@ -1915,6 +2032,7 @@ function prodForm(p, forceNew){
       cat:$("#f-cat").value, unit:$("#f-unit").value, cost:num($("#f-cost").value),
       price:num($("#f-price").value), qty:num($("#f-qty").value), min:num($("#f-min").value),
       dlc:$("#f-dlc").value, supplierId:$("#f-sup").value, code:$("#f-code").value });
+    $("#f-scan").onclick = () => scanCode(c => { const i = $("#f-code"); if(i) i.value = c; toast("تسجّل ✓"); });
     $("#f-sup").onchange = e => {
       if(e.target.value !== "__new") return;
       e.target.value = p.supplierId || "";
@@ -1930,16 +2048,130 @@ function prodForm(p, forceNew){
         min: num($("#f-min").value), dlc: $("#f-dlc").value || "",
         supplierId: $("#f-sup").value, code: $("#f-code").value.trim()
       };
+      if(isNew) d.qty = num($("#f-qty").value);      /* lu avant toute autre feuille */
       if(!d.name) return toast("الاسم ضروري");
       if(d.price <= 0) return toast("حط سعر البيع");
+      const mg = d.cost > 0 ? Math.round(((d.price - d.cost) / d.cost) * 100) : null;
+      if(mg !== null && d.price <= d.cost){
+        if(!await ask("تنبيه الهامش", "سعر البيع أقل من سعر الشراء أو يساويه — باش تخسر في كل بيعة.", "كمّل برك")) return;
+      }else if(mg !== null && mg < (S.set.minMarge ?? 10)){
+        if(!await ask("تنبيه الهامش", `الهامش ${mg}% أقل من الحد المحدّد (${S.set.minMarge ?? 10}%).`, "كمّل برك")) return;
+      }
       closeSheet();
-      if(isNew){ d.qty = num($("#f-qty").value); await add("products", d); toast("تزاد المنتج ✓"); }
+      if(isNew){ await add("products", d); toast("تزاد المنتج ✓"); }
       else { await upd("products", p.id, d); toast("تم التعديل ✓"); }
     };
   });
 }
 ACT["prod-new"] = () => prodForm(null);
 
+/* quantité conseillée : couvrir N jours au rythme des derniers jours */
+function restockList(){
+  const look = Math.max(3, S.set.lookDays || 15), days = Math.max(1, S.set.restockDays || 7);
+  const from = addDays(todayKey(), -look);
+  const sold = {};
+  S.sales.filter(x => x.date >= from).forEach(x => (x.items || []).forEach(i => {
+    sold[i.id] = (sold[i.id] || 0) + (i.qty || 0);
+  }));
+  return S.products.map(p => {
+    const s = sold[p.id] || 0, perDay = s / look;
+    const target = Math.max((p.min ?? S.set.lowStock) * 2, perDay * days);
+    const need = Math.max(0, Math.round((target - (p.qty || 0)) * 1000) / 1000);
+    return { p, sold:s, perDay, need, cost:need * (p.cost || 0) };
+  }).filter(r => r.need > 0)
+    .sort((a, b) => b.cost - a.cost);
+}
+/* journal reconstruit : ajustements + ventes + réceptions */
+function stockJournal(pid){
+  const out = [];
+  S.moves.forEach(m => { if(!pid || m.productId === pid)
+    out.push({ ts:m.ts, date:m.date, id:m.productId, name:m.name, delta:m.delta, why:m.reason || "تعديل الكمية", by:m.by }); });
+  S.sales.forEach(s => (s.items || []).forEach(i => { if(!pid || i.id === pid)
+    out.push({ ts:s.ts, date:s.date, id:i.id, name:i.name, nameFr:i.nameFr, delta:-(i.qty || 0), why:"بيع #" + s.no, by:s.by }); }));
+  S.purchases.forEach(b => (b.items || []).forEach(i => { if(!pid || i.id === pid)
+    out.push({ ts:b.ts, date:b.date, id:i.id, name:i.name, nameFr:i.nameFr, delta:(i.qty || 0), why:"وصل شراء #" + b.no, by:b.by }); }));
+  return out.sort((a, b) => b.ts - a.ts);
+}
+const jRow = m => `<div class="item">
+  <div class="av">${m.delta >= 0 ? "↘" : "↗"}</div>
+  <div class="bd"><div class="nm">${esc(pn(m))}</div>
+    <div class="mt">${dfr(m.date)} ${hhmm(m.ts)} · ${esc(m.why || "")}</div></div>
+  <div class="rt"><div class="amt ${m.delta < 0 ? "neg" : ""}">${m.delta > 0 ? "+" : ""}${qtyF(m.delta)}</div></div>
+</div>`;
+ACT["journal"] = () => {
+  const j = stockJournal().slice(0, 200);
+  sheet("سجل حركات المخزون", `
+    ${j.length ? `<div class="list">${j.map(jRow).join("")}</div>`
+      : `<div class="empty"><div class="ic">📦</div>ما فماش حركات في هالفترة</div>`}
+    <div class="foot"><button class="btn line" data-act="close">غلق</button></div>`);
+};
+ACT["prod-journal"] = id => {
+  const j = stockJournal(id).slice(0, 100);
+  sheet("سجل حركات المخزون", `
+    ${j.length ? `<div class="list">${j.map(jRow).join("")}</div>`
+      : `<div class="empty"><div class="ic">📦</div>ما فماش حركات في هالفترة</div>`}
+    <div class="foot"><button class="btn line" data-act="close">غلق</button></div>`);
+};
+
+ACT["restock"] = () => {
+  const rows = restockList();
+  if(!rows.length) return toast("المخزون مليح");
+  const byS = {};
+  rows.forEach(r => { const k = r.p.supplierId || ""; (byS[k] = byS[k] || []).push(r); });
+  const total = sumBy(rows, r => r.cost);
+  sheet("قائمة التموين", `
+    <div class="csub">حساب على ${S.set.lookDays || 15} يوم، لتغطية ${S.set.restockDays || 7} أيام</div>
+    ${Object.entries(byS).map(([sid, list]) => {
+      const sup = S.suppliers.find(x => x.id === sid);
+      return `<div class="sec-title">${sup ? ic("truck",13) + " " + esc(sup.name) : "بدون مزود"}</div>
+      <div class="list">${list.map(r => `<div class="item">
+        <div class="av">${r.p.img ? `<img class="pimg" src="${esc(r.p.img)}" alt="">` : catIc(r.p.cat)}</div>
+        <div class="bd"><div class="nm">${esc(pn(r.p))}</div>
+          <div class="mt">عندك ${qtyF(r.p.qty || 0)} · مبيع ${qtyF(r.sold)} ${esc(r.p.unit || "")}</div></div>
+        <div class="rt"><div class="amt">${qtyF(r.need)}</div><div class="mt">${esc(r.p.unit || "")}</div></div>
+      </div>`).join("")}</div>
+      ${sup ? `<button class="btn line block sm" style="margin-top:8px" data-act="restock-buy" data-id="${sid}">${ic("box",14)} اعمل وصل شراء</button>` : ""}`;
+    }).join("")}
+    <div class="tot-row big"><span>التكلفة التقديرية</span><span>${DT(total)}</span></div>
+    <div class="grid2" style="gap:9px;margin-top:12px">
+      <button class="btn ghost sm" data-act="restock-print">${ic("print",15)} طباعة</button>
+      <button class="btn ghost sm" data-act="restock-share">📲 شارك</button>
+    </div>
+    <div class="foot"><button class="btn line" data-act="close">غلق</button></div>`);
+};
+ACT["restock-buy"] = sid => {
+  const rows = restockList().filter(r => (r.p.supplierId || "") === sid);
+  if(!rows.length) return;
+  BUY = { editId:"", supplierId:sid, date:todayKey(), paid:0,
+          lines:rows.map(r => ({ id:r.p.id, qty:r.need, cost:r.p.cost || 0, price:r.p.price || 0 })) };
+  closeSheet(); buySheet();
+};
+ACT["restock-print"] = () => {
+  const rows = restockList(); closeSheet();
+  doPrint(`<div class="doc">
+    <div class="hd"><div><h1>${esc(S.set.shop)}</h1><div style="font-size:11px">${LANG === "fr" ? "" : esc(S.set.shopFr || "")}</div></div>
+      <div class="r"><b>قائمة التموين</b><br>${dfr(todayKey())}</div></div>
+    <table><tr><th>#</th><th>المنتج</th><th>المزود</th><th>الكمية الحالية</th><th>الكمية المطلوبة</th><th>التكلفة</th></tr>
+      ${rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(pn(r.p))}</td>
+        <td>${esc(S.suppliers.find(x => x.id === r.p.supplierId)?.name || "—")}</td>
+        <td>${qtyF(r.p.qty || 0)} ${esc(r.p.unit || "")}</td><td><b>${qtyF(r.need)}</b></td>
+        <td>${money(r.cost)}</td></tr>`).join("")}
+    </table>
+    <table class="tot"><tr class="g"><td>التكلفة التقديرية</td><td class="tl">${money(sumBy(rows, r => r.cost))} د.ت</td></tr></table>
+    <div class="ft">التاريخ : ${dfr(todayKey())} — أُنجز بواسطة تطبيق ${esc(S.set.shop)}</div></div>`);
+};
+ACT["restock-share"] = () => {
+  const rows = restockList();
+  shareText("قائمة التموين", [`*${S.set.shop}* — قائمة التموين ${dfr(todayKey())}`, ""]
+    .concat(rows.map(r => `• ${pn(r.p)} : ${qtyF(r.need)} ${r.p.unit || ""}`))
+    .concat(["", `التكلفة التقديرية : ${money(sumBy(rows, r => r.cost))} د.ت`]).join("\n"));
+};
+
+ACT["prod-fav"] = async id => {
+  const p = prod(id); if(!p) return;
+  await upd("products", id, { fav: !p.fav });
+  closeSheet(); toast(p.fav ? "تنحّى من المفضّلة ✓" : "تزاد للمفضّلة ✓");
+};
 ACT["prod-view"] = async id => {
   const p = prod(id); if(!p) return;
   const low = (p.qty || 0) <= (p.min ?? S.set.lowStock);
@@ -1951,6 +2183,8 @@ ACT["prod-view"] = async id => {
       ${low ? '<span class="tag gold">كمية ضعيفة</span>' : '<span class="tag">المخزون مليح</span>'}
       ${p.dlc ? `<span class="tag ${p.dlc <= addDays(todayKey(), S.set.dlcDays) ? "dan" : "mute"}">صلوحية ${dfr(p.dlc)}</span>` : ""}
       ${sup ? `<span class="tag info">${ic("truck",12)} ${esc(sup.name)}</span>` : ""}
+      ${thinMarge(p) ? `<span class="tag dan">📉 هامش ضعيف</span>` : ""}
+      <button class="tag ${p.fav ? "gold" : "mute"}" data-act="prod-fav" data-id="${id}">${p.fav ? "⭐ مفضّل" : "☆ زيدو للمفضّلة"}</button>
     </div>
     <div class="kpis" style="grid-template-columns:1fr 1fr">
       <div class="kpi"><div class="lb">الكمية</div><div class="vl">${qtyF(p.qty || 0)} <span style="font-size:13px">${esc(p.unit || "")}</span></div></div>
@@ -1964,6 +2198,7 @@ ACT["prod-view"] = async id => {
       <button class="btn ghost sm" data-act="prod-qty" data-id="${p.id}">⚖️ تعديل الكمية</button>
       <button class="btn ghost sm" data-act="prod-edit" data-id="${p.id}">${ic("edit",15)} تعديل</button>
     </div>
+    <button class="btn ghost block sm" style="margin-top:9px" data-act="prod-journal" data-id="${p.id}">${ic("file",15)} سجل الحركات</button>
     <div class="foot"><button class="btn line" data-act="close">غلق</button>
       <button class="btn dan" data-act="prod-del" data-id="${p.id}">${ic("trash",16)} حذف</button></div>`);
 };
@@ -2033,7 +2268,17 @@ RENDER["p-cash"] = () => {
     <button class="btn" data-act="inc-new">${ic("plus",16)} مدخول</button>
   </div>
   <div class="chips">${Object.entries(PERIODS).map(([k, v]) => `<button class="chip ${CSH.per === k ? "on" : ""}" data-act="csh-per" data-id="${k}">${v}</button>`).join("")}
-    <button class="chip" data-act="day-report">🖨️ كشف اليوم</button></div>
+    <button class="chip" data-act="day-report">🖨️ كشف اليوم</button>
+    <button class="chip" data-act="day-share">📲 شارك الكشف</button>
+    <button class="chip" data-act="close-new">🔒 قفل الصندوق</button></div>
+  ${S.closings.length ? `<div class="card" style="padding:12px"><h3 style="font-size:14px">آخر عمليات القفل</h3>
+    <div class="list">${S.closings.slice(0, 5).map(c => `
+      <div class="item tap" data-act="close-view" data-id="${c.id}">
+        <div class="av">🔒</div>
+        <div class="bd"><div class="nm">${dfr(c.date)} ${hhmm(c.ts)}</div>
+          <div class="mt">محسوب ${money(c.counted)} · متوقّع ${money(c.expected)}</div></div>
+        <div class="rt"><div class="amt ${Math.abs(c.diff) > 0.001 ? "neg" : ""}">${c.diff > 0 ? "+" : ""}${money(c.diff)}</div></div>
+      </div>`).join("")}</div></div>` : ""}
   ${list.length ? `<div class="list">${list.map(c => `
     <div class="item tap" data-act="csh-view" data-id="${c.id}">
       <div class="av" style="background:${c.type === "in" ? "var(--g100)" : "var(--danger-soft)"};color:${c.type === "in" ? "var(--g700)" : "var(--danger)"}">${c.type === "in" ? "↘" : "↗"}</div>
@@ -2044,6 +2289,71 @@ RENDER["p-cash"] = () => {
   : `<div class="empty"><div class="ic">💰</div>ما فماش حركات في هالفترة</div>`}`;
 };
 ACT["csh-per"] = p => { CSH.per = p; render("p-cash"); };
+
+ACT["close-new"] = () => {
+  const exp = cashBal();
+  sheet("قفل الصندوق", `
+    <div class="tot-row"><span>الرصيد المتوقّع</span><b id="cl-exp">${DT(exp)}</b></div>
+    <div class="field" style="margin-top:12px"><label>المبلغ المحسوب في الصندوق *</label>${padHTML("cl-amt", "", 1)}</div>
+    <div class="tot-row big"><span>الفرق</span><span id="cl-diff">${DT(0)}</span></div>
+    <div class="field"><label>ملاحظة</label><input id="cl-note" class="inp" placeholder="اختياري"></div>
+    <div class="hint">إذا كان فما فرق، باش نزيدو حركة تصحيح في الصندوق باش الرصيد يوافق الواقع.</div>
+    <div class="foot"><button class="btn line" data-act="close">إلغاء</button>
+      <button class="btn" id="cl-ok">${ic("check",16)} سجّل القفل</button></div>`,
+  () => {
+    const inp = $("#cl-amt");
+    inp.onchange = () => $("#cl-diff").innerHTML = DT(num(inp.value) - exp);
+    $("#cl-ok").onclick = async () => {
+      const counted = num(inp.value);
+      if(counted < 0) return toast("اكتب المبلغ");
+      const diff = Math.round((counted - exp) * 1000) / 1000;
+      const note = $("#cl-note").value.trim();
+      if(Math.abs(diff) > 0.001 && !await ask("فرق في الصندوق",
+        `الفرق <b>${money(diff)} د.ت</b>.<br>باش نسجّلو حركة تصحيح في الصندوق.`, "تأكيد")) return;
+      closeSheet();
+      const w = fb.writeBatch(fb.db);
+      w.set(fb.doc(col("closings")), { ts:Date.now(), date:todayKey(), expected:exp, counted, diff, note,
+        by:S.user?.email || "", _at:Date.now() });
+      if(Math.abs(diff) > 0.001)
+        w.set(fb.doc(col("cash")), { ts:Date.now(), date:todayKey(), type: diff > 0 ? "in" : "out",
+          amount:Math.abs(diff), cat:"فرق الصندوق", label:"تصحيح بعد قفل الصندوق" + (note ? " — " + note : ""),
+          by:S.user?.email || "", _at:Date.now() });
+      await w.commit().catch(e => console.warn(e));
+      toast("تسجّل القفل ✓");
+    };
+  });
+};
+ACT["close-view"] = id => {
+  const c = S.closings.find(x => x.id === id); if(!c) return;
+  sheet("قفل " + dfr(c.date), `
+    <div class="tot-row"><span>الوقت</span><b>${hhmm(c.ts)}</b></div>
+    <div class="tot-row"><span>الرصيد المتوقّع</span><b>${DT(c.expected)}</b></div>
+    <div class="tot-row"><span>المبلغ المحسوب</span><b>${DT(c.counted)}</b></div>
+    <div class="tot-row big"><span>الفرق</span><span style="color:${Math.abs(c.diff) > .001 ? "var(--danger)" : "var(--g700)"}">${DT(c.diff)}</span></div>
+    ${c.note ? `<div class="hint">${esc(c.note)}</div>` : ""}
+    <div class="tot-row"><span>سجّلها</span><b>${esc((c.by || "").split("@")[0] || "—")}</b></div>
+    <div class="foot"><button class="btn line" data-act="close">غلق</button>
+      <button class="btn dan" data-act="close-del" data-id="${id}">${ic("trash",15)} حذف</button></div>`);
+};
+ACT["close-del"] = async id => {
+  if(!await ask("حذف القفل ؟", "حركة التصحيح في الصندوق تبقى كيما هي.", "حذف", true)) return;
+  closeSheet(); await del("closings", id); toast("تنحّات ✓");
+};
+
+/* ---- partage du kachf en texte ---- */
+ACT["day-share"] = () => {
+  const t = todayKey(), ds = S.sales.filter(s => s.date === t), dc = S.cash.filter(c => c.date === t);
+  const inn = sumBy(dc.filter(c => c.type === "in"), c => c.amount);
+  const out = sumBy(dc.filter(c => c.type === "out"), c => c.amount);
+  shareText("كشف اليوم", [
+    `*${S.set.shop}* — كشف اليوم ${dfr(t)}`, "",
+    `عدد عمليات البيع : ${ds.length}`,
+    `مجموع المداخيل : ${money(inn)} د.ت`,
+    `مجموع المصاريف : ${money(out)} د.ت`,
+    `صافي اليوم : ${money(inn - out)} د.ت`,
+    `رصيد الصندوق الإجمالي : ${money(cashBal())} د.ت`
+  ].join("\n"));
+};
 
 function cashForm(type){
   const cats = type === "out" ? S.set.expCats : ["مبيعات","خلاص حريف","إيداع","أخرى"];
@@ -3009,6 +3319,14 @@ RENDER["p-more"] = () => `
         <div style="font-size:26px">${e}</div><div style="font-weight:800;margin-top:6px">${t}</div>
         <div style="font-size:11.5px;color:var(--mute);margin-top:2px">${s}</div></button>`).join("")}
   </div>
+  <div class="grid2" style="gap:10px;margin-top:10px">
+    <button class="card" style="margin:0" data-act="restock"><div style="font-size:26px">🧾</div>
+      <div style="font-weight:800;margin-top:6px">قائمة التموين</div>
+      <div style="font-size:11.5px;color:var(--mute);margin-top:2px">${restockList().length} منتج</div></button>
+    <button class="card" style="margin:0" data-act="journal"><div style="font-size:26px">📦</div>
+      <div style="font-weight:800;margin-top:6px">سجل حركات المخزون</div>
+      <div style="font-size:11.5px;color:var(--mute);margin-top:2px">${stockJournal().length} حركة</div></button>
+  </div>
   <div class="card" style="margin-top:14px">
     <h3>ملخص سريع</h3>
     <div class="tot-row"><span>رصيد الصندوق</span><b>${DT(cashBal())}</b></div>
@@ -3054,6 +3372,8 @@ RENDER["p-set"] = () => {
     <div class="grid2">
       <div class="field"><label>حد التنبيه الافتراضي</label><input id="s-low" class="inp" type="text" inputmode="decimal" dir="ltr" value="${st.lowStock}"></div>
       <div class="field"><label>تنبيه الصلوحية (أيام)</label><input id="s-dlc" class="inp" type="text" inputmode="decimal" dir="ltr" value="${st.dlcDays}"></div>
+      <div class="field"><label>أدنى هامش ربح %</label><input id="s-marge" class="inp" type="text" inputmode="decimal" dir="ltr" value="${st.minMarge ?? 10}"></div>
+      <div class="field"><label>تغطية التموين (أيام)</label><input id="s-rest" class="inp" type="text" inputmode="decimal" dir="ltr" value="${st.restockDays ?? 7}"></div>
     </div>
     <button class="btn block" id="s-save2">${ic("save",16)} حفظ</button>
   </div>
@@ -3147,7 +3467,8 @@ RENDER["p-set:after"] = () => {
   $("#s-save1").onclick = async () => { await saveSet({ shop:v("#s-shop") || "مزرعة البركة", shopFr:v("#s-shopfr"),
     slogan:v("#s-slog"), addr:v("#s-addr"), phone:v("#s-tel"), mf:v("#s-mf"), rib:v("#s-rib") }); toast("تسجّل ✓"); };
   $("#s-save2").onclick = async () => { await saveSet({ tva:num(v("#s-tva")), timbre:num(v("#s-tim")),
-    lowStock:num(v("#s-low")), dlcDays:num(v("#s-dlc")) }); toast("تسجّل ✓"); };
+    lowStock:num(v("#s-low")), dlcDays:num(v("#s-dlc")),
+    minMarge:num(v("#s-marge")), restockDays:Math.max(1, num(v("#s-rest")) || 7) }); toast("تسجّل ✓"); };
   ["cats", "expCats"].forEach(k => { const i = $("#add-" + k);
     if(i) i.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); ACT["cat-add"](k); } }; });
   $("#s-notif").onclick = askNotif;
