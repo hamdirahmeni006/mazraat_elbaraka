@@ -313,6 +313,7 @@ nav button.on svg{stroke-width:2.4}
   border-radius:999px;padding:7px 11px;font-size:13px;font-weight:700}
 .ctag button{width:23px;height:23px;flex:0 0 auto;border-radius:50%;background:var(--surface);
   color:var(--danger);font-size:12px;font-weight:900;display:grid;place-items:center}
+.ctag button.ed{color:var(--g700)}
 .addrow{display:flex;gap:8px;align-items:center}
 .addrow .inp{flex:1;min-width:0}
 .addrow .btn{flex:0 0 auto;white-space:nowrap}
@@ -464,7 +465,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "1.6.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "1.7.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -475,6 +476,23 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&l
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[\s\u066C\u00A0]/g, "").replace(/[,\u066B]/, ".")); return isNaN(n) ? 0 : n; };
 
 const I18N = {
+"باش تتلغى العملية وترجع السلع للسلة باش تعاود تسجّلها":"سيتم إلغاء العملية وتعود المواد إلى السلة لتسجيلها من جديد|La vente sera annulée et les articles remis dans le panier",
+"عرض السعر باش يرجع مسودة وتنجم تحوّلو مرة أخرى":"سيعود عرض السعر مسوّدة ويمكن تحويله من جديد|Le devis redeviendra un brouillon et pourra être reconverti",
+"باش تتنحّى حركة الصندوق وترجع الفاتورة غير مخلّصة":"سيتم حذف حركة الصندوق وتعود الفاتورة غير مدفوعة|L'écriture de caisse sera supprimée et la facture repassera impayée",
+"باش ترجع الكميات من المخزون، ويتنحّى الدين والخلاص":"ستُخصم الكميات من المخزون ويُلغى الدين والدفع|Les quantités seront retirées du stock, la dette et le paiement annulés",
+"باش تتنحّى حركة الصندوق المرتبطة بيها":"سيتم حذف حركة الصندوق المرتبطة بها|L'écriture de caisse liée sera supprimée",
+"محوّلة لفاتورة رقم":"محوّلة إلى فاتورة رقم|Convertie en facture n°",
+"عرض السعر محوّل قبل":"عرض السعر محوّل من قبل|Ce devis est déjà converti",
+"من عرض سعر رقم":"|Issu du devis n°",
+"تعديل وصل شراء":"|Modifier le bon d'achat",
+"تعديل الحركة":"|Modifier le mouvement",
+"تعديل الصنف":"|Modifier la catégorie",
+"تعديل الوصل":"|Modifier le bon",
+"إلغاء الخلاص":"إلغاء الدفع|Annuler le paiement",
+"تعديل البيع":"|Modifier la vente",
+"حذف الوصل":"|Supprimer le bon",
+"حذف الوثيقة":"|Supprimer le document",
+"محوّلة":"|Convertie",
 "المنتجات القديمة تبقى على صنفها":"|Les produits gardent leur catégorie",
 "زيد سلعة أخرى":"أضف مادة أخرى|Ajouter un autre article",
 "هذا الصنف موجود":"|Cette catégorie existe déjà",
@@ -720,7 +738,6 @@ const I18N = {
 "تفريغ السلة":"|Vider le panier",
 "تنزّل الملف":"تم تنزيل الملف|Fichier téléchargé",
 "جاري الدخول":"جارٍ الدخول|Connexion…",
-"حذف الوثيقة":"|Supprimer le document",
 "خلاص فاتورة":"دفع فاتورة|Paiement de facture",
 "خلاص للمزود":"دفعة للمورّد|Paiement fournisseur",
 "رجع الاتصال":"عاد الاتصال|Connexion rétablie",
@@ -1813,8 +1830,8 @@ function prodForm(p){
   sheet(isNew ? "منتج جديد" : "تعديل المنتج", `
     <div class="field"><label>اسم المنتج *</label><input id="f-name" class="inp" value="${esc(p.name || "")}" placeholder="مثال : دجاج كامل"></div>
     <div class="grid2">
-      <div class="field"><label>الصنف</label><select id="f-cat" class="inp">${S.set.cats.map(c => `<option ${p.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
-      <div class="field"><label>الوحدة</label><select id="f-unit" class="inp">${UNITS.map(u => `<option ${p.unit === u ? "selected" : ""}>${u}</option>`).join("")}</select></div>
+      <div class="field"><label>الصنف</label><select id="f-cat" class="inp">${S.set.cats.map(c => `<option value="${esc(c)}" ${p.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
+      <div class="field"><label>الوحدة</label><select id="f-unit" class="inp">${UNITS.map(u => `<option value="${esc(u)}" ${p.unit === u ? "selected" : ""}>${esc(u)}</option>`).join("")}</select></div>
     </div>
     <div class="grid2">
       <div class="field"><label>سعر الشراء</label><input id="f-cost" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.cost || 0}"></div>
@@ -1892,7 +1909,7 @@ ACT["prod-qty"] = id => {
     <div class="field"><label id="q-lb">الكمية اللي باش تزيد (${esc(p.unit)})</label>
       ${padHTML("q-v", "", /كغ|لتر|kg|L/i.test(p.unit || "") ? 0.5 : 1)}</div>
     <div class="field"><label>السبب</label>
-      <select id="q-r" class="inp"><option>وصول بضاعة</option><option>جرد / تصحيح</option><option>تالف / كسر</option><option>استهلاك ذاتي</option><option>إرجاع حريف</option><option>أخرى</option></select></div>
+      <select id="q-r" class="inp"><option value="وصول بضاعة">وصول بضاعة</option><option value="جرد / تصحيح">جرد / تصحيح</option><option value="تالف / كسر">تالف / كسر</option><option value="استهلاك ذاتي">استهلاك ذاتي</option><option value="إرجاع حريف">إرجاع حريف</option><option value="أخرى">أخرى</option></select></div>
     <div class="hint">الكمية الحالية : <b>${qtyF(p.qty || 0)} ${esc(p.unit)}</b></div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="q-save">حفظ</button></div>`,
   () => {
@@ -1977,7 +1994,7 @@ function cashForm(type){
   sheet(type === "out" ? "مصروف جديد" : "مدخول جديد", `
     <div class="field"><label>المبلغ (د.ت) *</label>
       ${padHTML("c-amt", "", 1)}</div>
-    <div class="field"><label>النوع</label><select id="c-cat" class="inp">${cats.map(c => `<option>${esc(c)}</option>`).join("")}</select></div>
+    <div class="field"><label>النوع</label><select id="c-cat" class="inp">${cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div>
     <div class="field"><label>الوصف</label><input id="c-lab" class="inp" placeholder="مثال : خلاص فاتورة الضوء"></div>
     <div class="field"><label>التاريخ</label><input id="c-date" class="inp" type="date" dir="ltr" value="${todayKey()}"></div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button>
@@ -1995,6 +2012,33 @@ function cashForm(type){
 }
 ACT["exp-new"] = () => cashForm("out");
 ACT["inc-new"] = () => cashForm("in");
+/* une écriture n'est verrouillée que si son document d'origine existe encore */
+const cashLinked = c => !!(c.ref && (S.sales.some(x => x.id === c.ref) || S.docs.some(x => x.id === c.ref)
+  || S.purchases.some(x => x.id === c.ref)));
+ACT["csh-edit"] = id => {
+  const c = S.cash.find(x => x.id === id); if(!c) return;
+  const cats = c.type === "out" ? S.set.expCats : ["مبيعات","خلاص حريف","إيداع","أخرى"];
+  sheet("تعديل الحركة", `
+    <div class="field"><label>الوصف</label><input id="e-lb" class="inp" value="${esc(c.label || "")}"></div>
+    <div class="grid2">
+      <div class="field"><label>الصنف</label><select id="e-cat" class="inp">
+        ${cats.map(x => `<option value="${esc(x)}" ${x === c.cat ? "selected" : ""}>${esc(x)}</option>`).join("")}
+        ${cats.includes(c.cat) ? "" : `<option value="${esc(c.cat || "")}" selected>${esc(c.cat || "—")}</option>`}</select></div>
+      <div class="field"><label>التاريخ</label><input id="e-date" class="inp" type="date" dir="ltr" value="${c.date}"></div>
+    </div>
+    <div class="field"><label>المبلغ (د.ت)</label>${padHTML("e-amt", c.amount, 1)}</div>
+    <div class="foot"><button class="btn line" data-act="close">إلغاء</button>
+      <button class="btn" id="e-ok">${ic("save",16)} حفظ</button></div>`,
+  () => {
+    $("#e-ok").onclick = async () => {
+      const a = num($("#e-amt").value); if(a <= 0) return toast("اكتب المبلغ");
+      closeSheet();
+      await upd("cash", id, { label:$("#e-lb").value.trim(), cat:$("#e-cat").value,
+        date:$("#e-date").value || c.date, amount:a });
+      toast("تم التعديل ✓");
+    };
+  });
+};
 ACT["csh-view"] = async id => {
   const c = S.cash.find(x => x.id === id); if(!c) return;
   sheet(esc(c.label || "حركة"), `
@@ -2003,9 +2047,10 @@ ACT["csh-view"] = async id => {
     <div class="tot-row"><span>الصنف</span><b>${esc(c.cat || "—")}</b></div>
     <div class="tot-row"><span>التاريخ</span><b>${dfr(c.date)} ${hhmm(c.ts)}</b></div>
     <div class="tot-row"><span>سجّلها</span><b>${esc((c.by || "").split("@")[0] || "—")}</b></div>
-    ${c.ref ? `<div class="hint">مرتبطة بعملية بيع — ما تنجمش تتحذف وحدها.</div>` : ""}
+    ${cashLinked(c) ? `<div class="hint">مرتبطة بعملية بيع — ما تنجمش تتحذف وحدها.</div>` : ""}
+    ${!cashLinked(c) ? `<button class="btn ghost block sm" style="margin-top:10px" data-act="csh-edit" data-id="${id}">${ic("edit",15)} تعديل الحركة</button>` : ""}
     <div class="foot"><button class="btn line" data-act="close">غلق</button>
-      ${c.ref ? "" : `<button class="btn dan" data-act="csh-del" data-id="${id}">${ic("trash",16)} حذف</button>`}</div>`);
+      ${cashLinked(c) ? "" : `<button class="btn dan" data-act="csh-del" data-id="${id}">${ic("trash",16)} حذف</button>`}</div>`);
 };
 ACT["csh-del"] = async id => {
   if(await ask("حذف الحركة ؟", "باش يتبدّل رصيد الصندوق.", "حذف", true)){ closeSheet(); await del("cash", id); toast("تنحّات ✓"); }
@@ -2174,11 +2219,33 @@ RENDER["p-buy"] = () => `
 
 ACT["buy-new"] = id => {
   if(!S.products.length) return toast("زيد المنتجات في المخزون الأول");
-  BUY = { supplierId:id || "", lines:[], paid:0, date:todayKey() };
+  BUY = { editId:"", supplierId:id || "", lines:[], paid:0, date:todayKey() };
   buySheet();
 };
+ACT["buy-edit"] = id => {
+  const b = S.purchases.find(x => x.id === id); if(!b) return;
+  BUY = { editId:id, supplierId:b.supplierId || "", date:b.date, paid:b.paid || 0,
+          lines:(b.items || []).map(i => ({ id:i.id, qty:i.qty, cost:i.cost, price:i.price })) };
+  closeSheet(); buySheet();
+};
+ACT["buy-del"] = async id => {
+  const b = S.purchases.find(x => x.id === id); if(!b) return;
+  if(!await ask("حذف الوصل ؟", "باش ترجع الكميات من المخزون، ويتنحّى الدين والخلاص.", "حذف", true)) return;
+  closeSheet();
+  const w = fb.writeBatch(fb.db);
+  const dq = {};
+  (b.items || []).forEach(i => dq[i.id] = (dq[i.id] || 0) - i.qty);
+  Object.entries(dq).forEach(([pid, d]) => { if(prod(pid)) w.update(ref("products", pid), { qty: fb.increment(d) }); });
+  S.cash.filter(c => c.ref === id).forEach(c => w.delete(ref("cash", c.id)));
+  const rest = Math.max(0, (b.total || 0) - (b.paid || 0));
+  if(b.supplierId && rest > 0 && S.suppliers.some(x => x.id === b.supplierId))
+    w.update(ref("suppliers", b.supplierId), { balance: fb.increment(-rest) });
+  w.delete(ref("purchases", id));
+  await w.commit().catch(e => console.warn(e));
+  toast("تنحّات ✓"); go("p-buy");
+};
 function buySheet(){
-  sheet("وصل شراء جديد", `
+  sheet(BUY.editId ? "تعديل وصل شراء" : "وصل شراء جديد", `
     <div class="grid2">
       <div class="field"><label>المزود</label><select id="b-sup" class="inp"><option value="">— بدون —</option>
         ${S.suppliers.map(s => `<option value="${s.id}" ${BUY.supplierId === s.id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}
@@ -2190,7 +2257,7 @@ function buySheet(){
     <button class="btn line block sm" id="b-addline" style="margin-top:8px">${ic("plus",15)} زيد سلعة</button>
     <div class="tot-row big"><span>المجموع</span><span id="b-tot">${DT(0)}</span></div>
     <div class="grid2" style="margin-top:10px">
-      <div class="field"><label>المبلغ المخلّص</label><input id="b-paid" class="inp" type="text" inputmode="decimal" dir="ltr" value="0"></div>
+      <div class="field"><label>المبلغ المخلّص</label><input id="b-paid" class="inp" type="text" inputmode="decimal" dir="ltr" value="${BUY.paid || 0}"></div>
       <div class="field"><label>الباقي (دين)</label><input id="b-rest" class="inp" dir="ltr" readonly style="background:#EFF2EE" value="0.000"></div>
     </div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="b-ok">${ic("save",16)} تسجيل الوصل</button></div>`,
@@ -2250,17 +2317,36 @@ async function saveBuy(){
   if(!supId && total - paid > 0) return toast("اختار المزود باش نسجلو الدين");
   const items = BUY.lines.map(l => ({ id:l.id, name:prod(l.id)?.name || "", qty:l.qty, cost:l.cost, price:l.price }));
   closeSheet();
+  const old = BUY.editId ? S.purchases.find(x => x.id === BUY.editId) : null;
   const b = fb.writeBatch(fb.db);
-  const bref = fb.doc(col("purchases"));
-  b.set(bref, { no:nextNo(S.purchases), ts:Date.now(), date, supplierId:supId, supplierName:sup?.name || "",
-    items, total, paid, by:S.user?.email || "", _at:Date.now() });
-  items.forEach(it => b.update(ref("products", it.id), { qty: fb.increment(it.qty), cost: it.cost, price: it.price }));
+  const bref = old ? ref("purchases", old.id) : fb.doc(col("purchases"));
+
+  /* une seule écriture par document : on cumule les variations */
+  const dq = {};
+  if(old) (old.items || []).forEach(i => dq[i.id] = (dq[i.id] || 0) - i.qty);
+  items.forEach(i => dq[i.id] = (dq[i.id] || 0) + i.qty);
+  Object.entries(dq).forEach(([pid, d]) => {
+    if(!prod(pid)) return;
+    const it = items.find(x => x.id === pid);
+    b.update(ref("products", pid), it ? { qty: fb.increment(d), cost: it.cost, price: it.price }
+                                      : { qty: fb.increment(d) });
+  });
+  const ds = {};
+  if(old && old.supplierId) ds[old.supplierId] = (ds[old.supplierId] || 0) - Math.max(0, (old.total || 0) - (old.paid || 0));
+  if(supId) ds[supId] = (ds[supId] || 0) + Math.max(0, total - paid);
+  Object.entries(ds).forEach(([sid, d]) => {
+    if(d && S.suppliers.some(x => x.id === sid)) b.update(ref("suppliers", sid), { balance: fb.increment(d) });
+  });
+  if(old) S.cash.filter(c => c.ref === old.id).forEach(c => b.delete(ref("cash", c.id)));
+
+  b.set(bref, { no: old ? old.no : nextNo(S.purchases), ts: old ? old.ts : Date.now(), date,
+    supplierId:supId, supplierName:sup?.name || "", items, total, paid,
+    by:S.user?.email || "", _at:Date.now() });
   if(paid > 0) b.set(fb.doc(col("cash")), { ts:Date.now(), date, type:"out", amount:paid, cat:"شراء بضاعة",
     label:`شراء بضاعة${sup ? " — " + sup.name : ""}`, supplierId:supId, ref:bref.id, by:S.user?.email || "", _at:Date.now() });
-  if(supId && total - paid > 0) b.update(ref("suppliers", supId), { balance: fb.increment(total - paid) });
   b.commit().catch(e => console.warn(e));
-  BUY = { supplierId:"", lines:[], paid:0, date:todayKey() };
-  toast("تسجّل الوصل والمخزون تعمّر ✓");
+  BUY = { editId:"", supplierId:"", lines:[], paid:0, date:todayKey() };
+  toast(old ? "تم التعديل ✓" : "تسجّل الوصل والمخزون تعمّر ✓");
   go("p-buy");
 }
 ACT["buy-view"] = id => {
@@ -2275,7 +2361,9 @@ ACT["buy-view"] = id => {
     <div class="tot-row big"><span>المجموع</span><span>${DT(b.total)}</span></div>
     <div class="tot-row"><span>المخلّص</span><b>${DT(b.paid || 0)}</b></div>
     <div class="tot-row"><span>الباقي</span><b style="color:var(--danger)">${DT(b.total - (b.paid || 0))}</b></div>
-    <div class="foot"><button class="btn line" data-act="close">غلق</button></div>`);
+    <button class="btn ghost block sm" style="margin-top:12px" data-act="buy-edit" data-id="${id}">${ic("edit",15)} تعديل الوصل</button>
+    <div class="foot"><button class="btn line" data-act="close">غلق</button>
+      <button class="btn dan" data-act="buy-del" data-id="${id}">${ic("trash",15)} حذف</button></div>`);
 };
 
 /* ============================================================
@@ -2360,20 +2448,36 @@ ACT["sale-view"] = id => {
     <div class="foot"><button class="btn line" data-act="close">غلق</button>
       <button class="btn ghost" data-act="sale-print" data-id="${id}">${ic("print",16)} تيكي</button>
       <button class="btn dan" data-act="sale-del" data-id="${id}">إلغاء البيع</button></div>`);
+  const f = $("#sheet-body .foot");
+  if(f) f.insertAdjacentHTML("beforebegin",
+    `<button class="btn ghost block sm" style="margin-top:12px" data-act="sale-edit" data-id="${id}">${ic("edit",15)} تعديل البيع</button>`);
 };
 ACT["sale-print"] = id => { closeSheet(); printTicket(S.sales.find(x => x.id === id)); };
+function undoSale(s){
+  const b = fb.writeBatch(fb.db);
+  const dq = {};
+  (s.items || []).forEach(i => dq[i.id] = (dq[i.id] || 0) + i.qty);
+  Object.entries(dq).forEach(([pid, d]) => { if(prod(pid)) b.update(ref("products", pid), { qty: fb.increment(d) }); });
+  S.cash.filter(c => c.ref === s.id).forEach(c => b.delete(ref("cash", c.id)));
+  if(s.mode === "credit" && s.clientId && S.clients.find(c => c.id === s.clientId))
+    b.update(ref("clients", s.clientId), { balance: fb.increment(-s.total) });
+  b.delete(ref("sales", s.id));
+  return b.commit();
+}
 ACT["sale-del"] = async id => {
   const s = S.sales.find(x => x.id === id); if(!s) return;
   if(!await ask("إلغاء البيع ؟", "باش ترجع السلع للمخزون، ويتنحّى المبلغ من الصندوق (أو من دين الحريف).", "إلغاء البيع", true)) return;
   closeSheet();
-  const b = fb.writeBatch(fb.db);
-  (s.items || []).forEach(i => { if(prod(i.id)) b.update(ref("products", i.id), { qty: fb.increment(i.qty) }); });
-  S.cash.filter(c => c.ref === id).forEach(c => b.delete(ref("cash", c.id)));
-  if(s.mode === "credit" && s.clientId && S.clients.find(c => c.id === s.clientId))
-    b.update(ref("clients", s.clientId), { balance: fb.increment(-s.total) });
-  b.delete(ref("sales", id));
-  b.commit().catch(e => console.warn(e));
+  await undoSale(s).catch(e => console.warn(e));
   toast("تلغى البيع ورجعت السلع ✓");
+};
+ACT["sale-edit"] = async id => {
+  const s = S.sales.find(x => x.id === id); if(!s) return;
+  if(!await ask("تعديل البيع ؟", "باش تتلغى العملية وترجع السلع للسلة باش تعاود تسجّلها.", "تعديل")) return;
+  closeSheet();
+  await undoSale(s).catch(e => console.warn(e));
+  CART = (s.items || []).map(i => ({ id:i.id, name:i.name, price:i.price, cost:i.cost, unit:i.unit, qty:i.qty }));
+  cartSync(); go("p-pos"); openCart();
 };
 
 /* ============================================================
@@ -2430,7 +2534,7 @@ RENDER["p-doc"] = () => {
     return `<div class="item tap" data-act="doc-view" data-id="${d.id}">
       <div class="av">${d.type === "facture" ? "🧾" : "📄"}</div>
       <div class="bd"><div class="nm">${d.type === "facture" ? "فاتورة" : "عرض سعر"} ${d.no}/${(d.date || "").slice(0,4)} — ${esc(d.client?.name || "")}</div>
-        <div class="mt">${dfr(d.date)} · ${(d.items || []).length} سطر · <span class="tag ${d.status === "payé" ? "" : d.status === "envoyé" ? "info" : "mute"}">${d.status === "payé" ? "مخلّصة" : d.status === "envoyé" ? "مبعوثة" : "مسودة"}</span></div></div>
+        <div class="mt">${dfr(d.date)} · ${(d.items || []).length} سطر · <span class="tag ${d.status === "payé" ? "" : d.status === "envoyé" ? "info" : "mute"}">${docSt(d.status)}</span></div></div>
       <div class="rt"><div class="amt">${money(t.ttc)}</div></div></div>`; }).join("")}</div>`
   : `<div class="empty"><div class="ic">🧾</div>ما فماش وثائق<br>
       <div style="font-size:12px;margin-top:6px">اعمل فاتورة لحريف جملة أو عرض سعر لمطعم</div></div>`}`;
@@ -2474,6 +2578,7 @@ function docForm(type, existing){
     <div class="field"><label>الحالة</label><select id="d-st" class="inp">
       <option value="brouillon" ${DOC.status === "brouillon" ? "selected" : ""}>مسودة</option>
       <option value="envoyé" ${DOC.status === "envoyé" ? "selected" : ""}>مبعوثة</option>
+      ${DOC.status === "converti" ? `<option value="converti" selected>محوّلة</option>` : ""}
       <option value="payé" ${DOC.status === "payé" ? "selected" : ""}>مخلّصة</option></select></div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="d-ok">${ic("save",16)} حفظ</button></div>`,
   () => {
@@ -2548,13 +2653,19 @@ function docForm(type, existing){
     drawL();
   });
 }
+const docSt = s => s === "payé" ? "مخلّصة" : s === "envoyé" ? "مبعوثة"
+  : s === "converti" ? "محوّلة" : "مسودة";
 ACT["doc-view"] = id => {
   const d = S.docs.find(x => x.id === id); if(!d) return;
   const t = docTot(d);
   sheet(`${d.type === "facture" ? "فاتورة" : "عرض سعر"} رقم ${d.no}`, `
     <div class="tot-row"><span>الحريف</span><b>${esc(d.client?.name || "")}</b></div>
     <div class="tot-row"><span>التاريخ</span><b>${dfr(d.date)}</b></div>
-    <div class="tot-row"><span>الحالة</span><b>${d.status === "payé" ? "مخلّصة" : d.status === "envoyé" ? "مبعوثة" : "مسودة"}</b></div>
+    <div class="tot-row"><span>الحالة</span><b>${docSt(d.status)}</b></div>
+    ${d.convertedTo && S.docs.some(x => x.id === d.convertedTo)
+      ? `<div class="hint">↪️ محوّلة لفاتورة رقم ${S.docs.find(x => x.id === d.convertedTo).no}</div>` : ""}
+    ${d.fromDevis && S.docs.some(x => x.id === d.fromDevis)
+      ? `<div class="hint">📄 من عرض سعر رقم ${S.docs.find(x => x.id === d.fromDevis).no}</div>` : ""}
     <div class="sec-title">الأسطر</div>
     ${(d.items || []).map(i => `<div class="cart-line"><div class="bd"><div style="font-weight:700">${esc(i.d)}</div>
       <div style="font-size:11.5px;color:var(--mute)">${qtyF(i.qty)} × ${money(i.pu)}</div></div><b>${money(i.qty * i.pu)}</b></div>`).join("")}
@@ -2563,18 +2674,55 @@ ACT["doc-view"] = id => {
       <button class="btn" data-act="doc-print" data-id="${id}">${ic("print",16)} طباعة / PDF</button>
       <button class="btn ghost" data-act="doc-edit" data-id="${id}">${ic("edit",15)} تعديل</button>
     </div>
-    ${d.type === "devis" ? `<button class="btn gold block sm" style="margin-top:9px" data-act="doc-conv" data-id="${id}">↪️ حوّلها لفاتورة</button>` : ""}
-    ${d.type === "facture" && d.status !== "payé" ? `<button class="btn gold block sm" style="margin-top:9px" data-act="doc-pay" data-id="${id}">💵 تسجيل الخلاص في الصندوق</button>` : ""}
+    ${d.type === "devis" && !(d.convertedTo && S.docs.some(x => x.id === d.convertedTo))
+      ? `<button class="btn gold block sm" style="margin-top:9px" data-act="doc-conv" data-id="${id}">↪️ حوّلها لفاتورة</button>` : ""}
+    ${d.type === "facture" && d.status !== "payé"
+      ? `<button class="btn gold block sm" style="margin-top:9px" data-act="doc-pay" data-id="${id}">💵 تسجيل الخلاص في الصندوق</button>`
+      : d.type === "facture" ? `<button class="btn line block sm" style="margin-top:9px" data-act="doc-unpay" data-id="${id}">↩️ إلغاء الخلاص</button>` : ""}
     <div class="foot"><button class="btn line" data-act="close">غلق</button>
       <button class="btn dan" data-act="doc-del" data-id="${id}">${ic("trash",15)} حذف</button></div>`);
 };
 ACT["doc-edit"] = id => { const d = S.docs.find(x => x.id === id); closeSheet(); docForm(d.type, d); };
-ACT["doc-del"]  = async id => { if(await ask("حذف الوثيقة ؟","", "حذف", true)){ closeSheet(); await del("docs", id); toast("تنحّات ✓"); } };
+ACT["doc-del"] = async id => {
+  const d = S.docs.find(x => x.id === id); if(!d) return;
+  const link = S.cash.filter(c => c.ref === id);
+  const note = [
+    link.length ? "باش تتنحّى حركة الصندوق المرتبطة بيها." : "",
+    d.fromDevis && S.docs.some(x => x.id === d.fromDevis) ? "عرض السعر باش يرجع مسودة وتنجم تحوّلو مرة أخرى." : ""
+  ].filter(Boolean).join("<br>");
+  if(!await ask("حذف الوثيقة ؟", note, "حذف", true)) return;
+  closeSheet();
+  const w = fb.writeBatch(fb.db);
+  link.forEach(c => w.delete(ref("cash", c.id)));
+  if(d.fromDevis && S.docs.some(x => x.id === d.fromDevis))
+    w.update(ref("docs", d.fromDevis), { status:"brouillon", convertedTo:"" });
+  if(d.convertedTo && S.docs.some(x => x.id === d.convertedTo))
+    w.update(ref("docs", d.convertedTo), { fromDevis:"" });
+  w.delete(ref("docs", id));
+  await w.commit().catch(e => console.warn(e));
+  toast("تنحّات ✓");
+};
 ACT["doc-conv"] = async id => {
-  const d = S.docs.find(x => x.id === id);
+  const d = S.docs.find(x => x.id === id); if(!d || d.type !== "devis") return;
+  if(d.convertedTo && S.docs.some(x => x.id === d.convertedTo))
+    return toast("عرض السعر محوّل قبل");
   const c = { ...d, type:"facture", no: nextNo(S.docs.filter(x => x.type === "facture")), date: todayKey(),
-              ts: Date.now(), status:"brouillon", timbre: S.set.timbre };
-  delete c.id; closeSheet(); await add("docs", c); toast("تحوّلت لفاتورة ✓");
+              ts: Date.now(), status:"brouillon", timbre: S.set.timbre, fromDevis:id, convertedTo:"" };
+  delete c.id;
+  closeSheet();
+  const r = await add("docs", c);
+  await upd("docs", id, { status:"converti", convertedTo: r?.id || "" });
+  toast("تحوّلت لفاتورة ✓"); go("p-doc");
+};
+ACT["doc-unpay"] = async id => {
+  const d = S.docs.find(x => x.id === id); if(!d) return;
+  if(!await ask("إلغاء الخلاص ؟", "باش تتنحّى حركة الصندوق وترجع الفاتورة غير مخلّصة.", "تأكيد", true)) return;
+  closeSheet();
+  const w = fb.writeBatch(fb.db);
+  S.cash.filter(c => c.ref === id).forEach(c => w.delete(ref("cash", c.id)));
+  w.update(ref("docs", id), { status:"envoyé", _at:Date.now() });
+  await w.commit().catch(e => console.warn(e));
+  toast("تنحّات ✓");
 };
 ACT["doc-pay"] = async id => {
   const d = S.docs.find(x => x.id === id), t = docTot(d);
@@ -2866,7 +3014,7 @@ RENDER["p-set"] = () => {
   <div class="hint" style="text-align:center;margin:14px 0 4px">🌿 ${esc(st.shop)}${LANG === "fr" ? "" : " — " + esc(st.shopFr || "")}</div>`;
 };
 const catChips = (a, k) => (a || []).map((c, i) =>
-  `<span class="ctag">${esc(c)}<button data-act="cat-del" data-id="${k}:${i}">✕</button></span>`
+  `<span class="ctag">${esc(c)}<button data-act="cat-ed" data-id="${k}:${i}" class="ed">✎</button><button data-act="cat-del" data-id="${k}:${i}">✕</button></span>`
 ).join("") || `<span class="hint">لا شيء</span>`;
 
 ACT["cat-add"] = async k => {
@@ -2877,6 +3025,27 @@ ACT["cat-add"] = async k => {
   if(cur.includes(val)) return toast("هذا الصنف موجود");
   cur.push(val); await saveSet({ [k]: cur });
   inp.value = ""; render("p-set"); toast("تسجّل ✓");
+};
+ACT["cat-ed"] = id => {
+  const j = id.lastIndexOf(":"), k = id.slice(0, j), n = +id.slice(j + 1);
+  const cur = (S.set[k] || []).slice(), old = cur[n];
+  if(old === undefined) return;
+  sheet("تعديل الصنف", `
+    <div class="field"><label>الاسم</label><input id="ce-v" class="inp" value="${esc(old)}"></div>
+    <div class="foot"><button class="btn line" data-act="close">إلغاء</button>
+      <button class="btn" id="ce-ok">${ic("save",16)} حفظ</button></div>`,
+  () => {
+    $("#ce-ok").onclick = async () => {
+      const v = $("#ce-v").value.trim();
+      if(!v) return toast("الاسم ضروري");
+      if(v !== old && cur.includes(v)) return toast("هذا الصنف موجود");
+      cur[n] = v; closeSheet();
+      await saveSet({ [k]: cur });
+      if(k === "cats") for(const p of S.products.filter(x => x.cat === old)) await upd("products", p.id, { cat:v });
+      if(k === "expCats") for(const c of S.cash.filter(x => x.cat === old)) await upd("cash", c.id, { cat:v });
+      render("p-set"); toast("تم التعديل ✓");
+    };
+  });
 };
 ACT["cat-del"] = async id => {
   const i = id.lastIndexOf(":"), k = id.slice(0, i), n = +id.slice(i + 1);
