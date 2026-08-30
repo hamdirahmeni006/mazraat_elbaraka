@@ -313,6 +313,9 @@ nav button.on svg{stroke-width:2.4}
   display:grid;gap:11px;justify-items:center}
 .scan .bar .t{color:#fff;font-size:13.5px;text-align:center}
 .scan .bar .btn{background:#fff;min-width:180px}
+.dline{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:7px;align-items:end}
+.dline select.inp{padding-inline:8px 26px;background-position:left 8px top 50%,left 4px top 50%}
+[dir=ltr] .dline select.inp{background-position:right 8px top 50%,right 4px top 50%;padding-inline:8px 26px}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tile{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);
   padding:14px 9px;min-height:124px;display:flex;flex-direction:column;align-items:center;
@@ -493,7 +496,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "2.4.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "2.5.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -504,6 +507,16 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&l
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[\s\u066C\u00A0]/g, "").replace(/[,\u066B]/, ".")); return isNaN(n) ? 0 : n; };
 
 const I18N = {
+"هذه النسب تظهر في فيشة المنتج وفي كل سطر من الفاتورة أو عرض السعر":"هذه النسب تظهر في بطاقة المنتج وفي كل سطر من الفاتورة أو عرض السعر|Ces taux apparaissent dans la fiche produit et sur chaque ligne de facture ou devis",
+"اكتب نسبة بين 0 و 100":"أدخل نسبة بين 0 و 100|Saisissez un taux entre 0 et 100",
+"لازم نسبة وحدة على الأقل":"يجب إبقاء نسبة واحدة على الأقل|Il faut garder au moins un taux",
+"الوثائق القديمة تبقى كيما هي":"الوثائق القديمة تبقى كما هي|Les documents existants ne changent pas",
+"هذه النسبة موجودة":"|Ce taux existe déjà",
+"حذف النسبة":"|Supprimer le taux",
+"نسب الأداء":"|Taux de TVA",
+"أداء البيع":"|TVA vente",
+"أداء الشراء":"|TVA achat",
+"على":"|sur",
 "لوج على سلعة أو باركود":"ابحث عن مادة أو باركود|Rechercher un article ou un code",
 "زيد بالباركود":"أضف بالباركود|Ajouter par code-barres",
 "التموين":"|À commander",
@@ -1312,7 +1325,7 @@ const DEF_SET = {
   shop:"مزرعة البركة", shopFr:"Mazraat El Baraka",
   slogan:"دواجن • بيض • أجبان ومشتقات • توابل",
   addr:"", phone:"", mf:"", rib:"",
-  tva:19, timbre:1, lowStock:5, dlcDays:5, minMarge:10, restockDays:7, lookDays:15,
+  tva:19, timbre:1, taxRates:[0, 7, 13, 19], lowStock:5, dlcDays:5, minMarge:10, restockDays:7, lookDays:15,
   cats:["دواجن","بيض","أجبان ومشتقات","مرينات","مجمدات","شاركوتري","توابل","أخرى"],
   expCats:["كهرباء وماء","كراء","نقل ووقود","أجور","صيانة","ضرائب","متفرقة"],
   notif:true
@@ -1504,6 +1517,14 @@ document.addEventListener("click", e => {
    ============================================================ */
 const prod = id => S.products.find(p => p.id === id);
 /* marge en % ; -1 si le prix d'achat est inconnu */
+const taxList = () => (S.set.taxRates && S.set.taxRates.length ? S.set.taxRates : [0, 7, 13, 19])
+  .map(Number).filter(x => !isNaN(x)).sort((a, b) => a - b);
+const taxOpts = sel => {
+  const v = Number(sel) || 0, l = taxList().slice();
+  if(!l.includes(v)) l.push(v);
+  return l.sort((a, b) => a - b)
+    .map(r => `<option value="${r}" ${r === v ? "selected" : ""}>${r}%</option>`).join("");
+};
 const margePct = p => (p && p.cost > 0) ? Math.round(((p.price - p.cost) / p.cost) * 100) : -1;
 const thinMarge = p => p && p.cost > 0 && p.price > 0 && margePct(p) < (S.set.minMarge ?? 10);
 const thinList  = () => S.products.filter(thinMarge);
@@ -2037,6 +2058,10 @@ function prodForm(p, forceNew){
       <div class="field"><label>سعر البيع *</label><input id="f-price" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.price || 0}"></div>
     </div>
     <div class="grid2">
+      <div class="field"><label>أداء البيع %</label><select id="f-txs" class="inp">${taxOpts(p.taxSale ?? S.set.tva)}</select></div>
+      <div class="field"><label>أداء الشراء %</label><select id="f-txb" class="inp">${taxOpts(p.taxBuy ?? S.set.tva)}</select></div>
+    </div>
+    <div class="grid2">
       <div class="field"><label>الكمية الحالية</label><input id="f-qty" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.qty || 0}" ${isNew ? "" : "readonly style=background:#EFF2EE"}></div>
       <div class="field"><label>حد التنبيه</label><input id="f-min" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.min ?? S.set.lowStock}"></div>
     </div>
@@ -2059,6 +2084,7 @@ function prodForm(p, forceNew){
     $("#f-imgpick").onclick = () => pickImage(d => { IMG = d; paint(); });
     const draft = () => ({ ...p, name:$("#f-name").value, nameFr:$("#f-namefr").value, img:IMG,
       cat:$("#f-cat").value, unit:$("#f-unit").value, cost:num($("#f-cost").value),
+      taxSale:num($("#f-txs").value), taxBuy:num($("#f-txb").value),
       price:num($("#f-price").value), qty:num($("#f-qty").value), min:num($("#f-min").value),
       dlc:$("#f-dlc").value, supplierId:$("#f-sup").value, code:$("#f-code").value });
     $("#f-scan").onclick = () => scanCode(c => {
@@ -2080,6 +2106,7 @@ function prodForm(p, forceNew){
         name: $("#f-name").value.trim(), nameFr: $("#f-namefr").value.trim(), img: IMG,
         cat: $("#f-cat").value, unit: $("#f-unit").value,
         cost: num($("#f-cost").value), price: num($("#f-price").value),
+        taxSale: num($("#f-txs").value), taxBuy: num($("#f-txb").value),
         min: num($("#f-min").value), dlc: $("#f-dlc").value || "",
         supplierId: $("#f-sup").value, code: $("#f-code").value.trim()
       };
@@ -2933,13 +2960,23 @@ const enDinars = v => {
 };
 
 let DOC = null;
+/* taux de la ligne : celui saisi, sinon celui du document, sinon celui des réglages */
+const lineTax = (l, d) => Number(l.tax !== undefined && l.tax !== "" ? l.tax : (d?.tva ?? S.set.tva ?? 0)) || 0;
 const docTot = d => {
   const ht = sumBy(d.items, i => i.qty * i.pu);
   const rem = ht * (d.remise || 0) / 100;
   const base = ht - rem;
-  const tva = base * (d.tva || 0) / 100;
+  const k = ht ? base / ht : 1;                        /* remise répartie sur les lignes */
+  const groups = {};
+  (d.items || []).forEach(i => {
+    const r = lineTax(i, d), b = i.qty * i.pu * k;
+    const g = groups[r] = groups[r] || { rate:r, base:0, tax:0 };
+    g.base += b; g.tax += b * r / 100;
+  });
+  const byRate = Object.values(groups).filter(g => g.base).sort((a, b) => a.rate - b.rate);
+  const tva = sumBy(byRate, g => g.tax);
   const timbre = d.type === "facture" ? (d.timbre || 0) : 0;
-  return { ht, rem, base, tva, timbre, ttc: base + tva + timbre };
+  return { ht, rem, base, tva, timbre, byRate, ttc: base + tva + timbre };
 };
 RENDER["p-doc"] = () => {
   const dv = S.docs.filter(d => d.type === "devis"), fa = S.docs.filter(d => d.type === "facture");
@@ -3003,6 +3040,7 @@ function docForm(type, existing, keep){
     items:[], remise:0, tva:S.set.tva, timbre:S.set.timbre, status:"brouillon", note:""
   };
   DOC.type = type;
+  (DOC.items || []).forEach(l => { if(l.tax === undefined || l.tax === "") l.tax = DOC.tva ?? S.set.tva ?? 0; });
   sheet((existing ? "تعديل " : "") + (type === "facture" ? "فاتورة" : "عرض سعر"), `
     <div class="grid2">
       <div class="field"><label>الرقم</label><input id="d-no" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.no}"></div>
@@ -3024,9 +3062,8 @@ function docForm(type, existing, keep){
       <button class="btn line sm" id="d-addf">${ic("plus",15)} سطر حر</button>
     </div>
     ${canScan() ? `<button class="btn line block sm" id="d-scan" style="margin-top:8px">📷 زيد بالباركود</button>` : ""}
-    <div class="grid3" style="margin-top:12px">
+    <div class="grid2" style="margin-top:12px">
       <div class="field"><label>تخفيض %</label><input id="d-rem" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.remise}"></div>
-      <div class="field"><label>الأداء %</label><input id="d-tva" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.tva}"></div>
       <div class="field"><label>الطابع</label><input id="d-tim" class="inp" type="text" inputmode="decimal" dir="ltr" value="${DOC.timbre}" ${type === "devis" ? "disabled" : ""}></div>
     </div>
     <div id="d-tots"></div>
@@ -3039,12 +3076,12 @@ function docForm(type, existing, keep){
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="d-ok">${ic("save",16)} حفظ</button></div>`,
   () => {
     const drawT = () => {
-      DOC.remise = num($("#d-rem").value); DOC.tva = num($("#d-tva").value); DOC.timbre = num($("#d-tim").value);
+      DOC.remise = num($("#d-rem").value); DOC.timbre = num($("#d-tim").value);
       const t = docTot(DOC);
       $("#d-tots").innerHTML = `
         <div class="tot-row"><span>المجموع دون أداء</span><b>${DT(t.ht)}</b></div>
         ${t.rem ? `<div class="tot-row"><span>تخفيض ${DOC.remise}%</span><b>− ${money(t.rem)}</b></div>` : ""}
-        <div class="tot-row"><span>الأداء ${DOC.tva}%</span><b>${DT(t.tva)}</b></div>
+        ${t.byRate.map(g => `<div class="tot-row"><span>الأداء ${g.rate}% على ${money(g.base)}</span><b>${DT(g.tax)}</b></div>`).join("")}
         ${t.timbre ? `<div class="tot-row"><span>الطابع الجبائي</span><b>${DT(t.timbre)}</b></div>` : ""}
         <div class="tot-row big"><span>المجموع مع الأداء</span><span>${DT(t.ttc)}</span></div>`;
     };
@@ -3052,9 +3089,10 @@ function docForm(type, existing, keep){
       $("#d-lines").innerHTML = DOC.items.length ? DOC.items.map((l, i) => `
         <div class="card" style="padding:10px;margin-bottom:7px">
           <input class="inp" data-dl="d" data-i="${i}" value="${esc(l.d)}" placeholder="التسمية" style="margin-bottom:7px">
-          <div class="grid3" style="gap:7px;align-items:end">
+          <div class="dline">
             <div><label style="font-size:11px;color:var(--mute)">الكمية</label><input class="inp" type="text" inputmode="decimal" dir="ltr" data-dl="q" data-i="${i}" value="${l.qty}"></div>
             <div><label style="font-size:11px;color:var(--mute)">السعر</label><input class="inp" type="text" inputmode="decimal" dir="ltr" data-dl="p" data-i="${i}" value="${l.pu}"></div>
+            <div><label style="font-size:11px;color:var(--mute)">الأداء</label><select class="inp" data-dl="t" data-i="${i}">${taxOpts(lineTax(l, DOC))}</select></div>
             <button class="btn line sm" data-dl="x" data-i="${i}">${ic("trash",14)}</button>
           </div>
           <div class="tl" style="margin-top:6px;font-weight:800">${DT(l.qty * l.pu)}</div>
@@ -3067,7 +3105,7 @@ function docForm(type, existing, keep){
       DOC.client = { name:$("#d-cname").value.trim(), addr:$("#d-caddr").value.trim(),
                      mf:$("#d-cmf").value.trim(), phone:DOC.client.phone || "" };
       DOC.note = $("#d-note").value.trim(); DOC.status = $("#d-st").value;
-      DOC.remise = num($("#d-rem").value); DOC.tva = num($("#d-tva").value); DOC.timbre = num($("#d-tim").value);
+      DOC.remise = num($("#d-rem").value); DOC.timbre = num($("#d-tim").value);
     };
     $("#d-cli").onchange = e => {
       if(e.target.value === "__new"){
@@ -3085,11 +3123,11 @@ function docForm(type, existing, keep){
       DOC.clientId = e.target.value;
       if(c){ $("#d-cname").value = c.name; $("#d-caddr").value = c.addr || ""; $("#d-cmf").value = c.mf || ""; }
     };
-    $("#d-addf").onclick = () => { DOC.items.push({ d:"", qty:1, pu:0 }); drawL(); };
+    $("#d-addf").onclick = () => { DOC.items.push({ d:"", qty:1, pu:0, tax:S.set.tva }); drawL(); };
     const addProd = p => {                       /* une ligne par produit : on cumule */
       const ex = DOC.items.find(i => i.pid === p.id);
       if(ex) ex.qty = Math.round(((ex.qty || 0) + 1) * 1000) / 1000;
-      else DOC.items.push({ d:pn(p), pid:p.id, qty:1, pu:p.price || 0 });
+      else DOC.items.push({ d:pn(p), pid:p.id, qty:1, pu:p.price || 0, tax:p.taxSale ?? S.set.tva });
     };
     $("#d-addp").onclick = () => {
       snap();                                    /* la saisie en cours est conservée */
@@ -3100,6 +3138,10 @@ function docForm(type, existing, keep){
       const p = S.products.find(x => (x.code || "").trim() === code);
       if(!p) return toast("ما فماش سلعة بهذا الاسم");
       addProd(p); drawL(); toast(pn(p) + " ✓");
+    });
+    $("#d-lines").addEventListener("change", e => {
+      const b = e.target.closest("[data-dl]"); if(!b || b.dataset.dl !== "t") return;
+      DOC.items[+b.dataset.i].tax = num(b.value); drawT();
     });
     $("#d-lines").addEventListener("input", e => {
       const t = e.target.closest("[data-dl]"); if(!t) return;
@@ -3113,7 +3155,7 @@ function docForm(type, existing, keep){
       const b = e.target.closest("[data-dl='x']"); if(!b) return;
       DOC.items.splice(+b.dataset.i, 1); drawL();
     });
-    ["#d-rem","#d-tva","#d-tim"].forEach(s => $(s).oninput = drawT);
+    ["#d-rem","#d-tim"].forEach(s => { const e = $(s); if(e) e.onchange = drawT; });
     $("#d-ok").onclick = async () => {
       DOC.no = num($("#d-no").value) || DOC.no;
       DOC.date = $("#d-date").value || todayKey();
@@ -3147,6 +3189,8 @@ ACT["doc-view"] = id => {
     <div class="sec-title">الأسطر</div>
     ${(d.items || []).map(i => `<div class="cart-line"><div class="bd"><div style="font-weight:700">${esc(i.d)}</div>
       <div style="font-size:11.5px;color:var(--mute)">${qtyF(i.qty)} × ${money(i.pu)}</div></div><b>${money(i.qty * i.pu)}</b></div>`).join("")}
+    ${t.byRate.map(g => `<div class="tot-row"><span>الأداء ${g.rate}%</span><b>${DT(g.tax)}</b></div>`).join("")}
+    ${t.timbre ? `<div class="tot-row"><span>الطابع الجبائي</span><b>${DT(t.timbre)}</b></div>` : ""}
     <div class="tot-row big"><span>المجموع مع الأداء</span><span>${DT(t.ttc)}</span></div>
     <div class="grid2" style="gap:9px;margin-top:12px">
       <button class="btn" data-act="doc-print" data-id="${id}">${ic("print",16)} طباعة / PDF</button>
@@ -3226,13 +3270,13 @@ ACT["doc-print"] = id => {
       <tr><td>${esc(st.shop)}<br>${esc(st.addr || "")}<br>${st.mf ? "MF : " + esc(st.mf) : ""}</td>
           <td><b>${esc(d.client?.name || "")}</b><br>${esc(d.client?.addr || "")}<br>${d.client?.mf ? "MF : " + esc(d.client.mf) : ""}</td></tr></table>
     <table>
-      <tr><th style="width:34px">#</th><th>التسمية</th><th style="width:70px">الكمية</th><th style="width:90px">السعر</th><th style="width:100px">المبلغ</th></tr>
-      ${(d.items || []).map((i, k) => `<tr><td>${k + 1}</td><td>${esc(i.d)}</td><td>${qtyF(i.qty)}</td><td>${money(i.pu)}</td><td>${money(i.qty * i.pu)}</td></tr>`).join("")}
+      <tr><th style="width:32px">#</th><th>التسمية</th><th style="width:62px">الكمية</th><th style="width:82px">السعر</th><th style="width:52px">الأداء</th><th style="width:92px">المبلغ</th></tr>
+      ${(d.items || []).map((i, k) => `<tr><td>${k + 1}</td><td>${esc(i.d)}</td><td>${qtyF(i.qty)}</td><td>${money(i.pu)}</td><td>${lineTax(i, d)}%</td><td>${money(i.qty * i.pu)}</td></tr>`).join("")}
     </table>
     <table class="tot">
       <tr><td>المجموع دون أداء</td><td class="tl">${money(t.ht)} د.ت</td></tr>
       ${t.rem ? `<tr><td>تخفيض ${d.remise}%</td><td class="tl">− ${money(t.rem)} د.ت</td></tr>` : ""}
-      <tr><td>الأداء على القيمة المضافة ${d.tva}%</td><td class="tl">${money(t.tva)} د.ت</td></tr>
+      ${t.byRate.map(g => `<tr><td>الأداء على القيمة المضافة ${g.rate}% على ${money(g.base)}</td><td class="tl">${money(g.tax)} د.ت</td></tr>`).join("")}
       ${t.timbre ? `<tr><td>الطابع الجبائي</td><td class="tl">${money(t.timbre)} د.ت</td></tr>` : ""}
       <tr class="g"><td>المجموع مع الأداء</td><td class="tl">${money(t.ttc)} د.ت</td></tr>
     </table>
@@ -3454,6 +3498,13 @@ RENDER["p-set"] = () => {
       <div class="chips-ed">${catChips(st.cats, "cats")}</div>
       <div class="addrow"><input id="add-cats" class="inp" placeholder="صنف جديد">
         <button class="btn sm" data-act="cat-add" data-id="cats">${ic("plus",15)} زيد</button></div></div>
+    <div class="field"><label>نسب الأداء %</label>
+      <div class="chips-ed">${taxList().map((r, i) =>
+        `<span class="ctag">${r}%<button data-act="tax-del" data-id="${i}">✕</button></span>`).join("")
+        || `<span class="hint">لا شيء</span>`}</div>
+      <div class="addrow"><input id="add-tax" class="inp" type="text" inputmode="decimal" dir="ltr" placeholder="مثال : 7">
+        <button class="btn sm" data-act="tax-add">${ic("plus",15)} زيد</button></div>
+      <div class="hint">هذه النسب تظهر في فيشة المنتج وفي كل سطر من الفاتورة أو عرض السعر.</div></div>
     <div class="field" style="margin-bottom:0"><label>أصناف المصاريف</label>
       <div class="chips-ed">${catChips(st.expCats, "expCats")}</div>
       <div class="addrow"><input id="add-expCats" class="inp" placeholder="صنف جديد">
@@ -3495,6 +3546,22 @@ const catChips = (a, k) => (a || []).map((c, i) =>
   `<span class="ctag">${esc(c)}<button data-act="cat-ed" data-id="${k}:${i}" class="ed">✎</button><button data-act="cat-del" data-id="${k}:${i}">✕</button></span>`
 ).join("") || `<span class="hint">لا شيء</span>`;
 
+ACT["tax-add"] = async () => {
+  const i = document.getElementById("add-tax"); if(!i) return;
+  const v = num(i.value);
+  if(i.value.trim() === "" || v < 0 || v > 100) return toast("اكتب نسبة بين 0 و 100");
+  const cur = taxList();
+  if(cur.includes(v)) return toast("هذه النسبة موجودة");
+  await saveSet({ taxRates:[...cur, v].sort((a, b) => a - b) });
+  i.value = ""; render("p-set"); toast("تسجّل ✓");
+};
+ACT["tax-del"] = async id => {
+  const cur = taxList(), n = +id;
+  if(cur.length <= 1) return toast("لازم نسبة وحدة على الأقل");
+  if(!await ask("حذف النسبة ؟", `<b>${cur[n]}%</b><br>الوثائق القديمة تبقى كيما هي.`, "حذف", true)) return;
+  cur.splice(n, 1); closeSheet();
+  await saveSet({ taxRates:cur }); render("p-set"); toast("تنحّات ✓");
+};
 ACT["cat-add"] = async k => {
   const inp = document.getElementById("add-" + k); const val = (inp?.value || "").trim();
   if(!inp || !Array.isArray(S.set[k])) return;
@@ -3542,6 +3609,8 @@ RENDER["p-set:after"] = () => {
     minMarge:num(v("#s-marge")), restockDays:Math.max(1, num(v("#s-rest")) || 7) }); toast("تسجّل ✓"); };
   ["cats", "expCats"].forEach(k => { const i = $("#add-" + k);
     if(i) i.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); ACT["cat-add"](k); } }; });
+  const ti = $("#add-tax");
+  if(ti) ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); ACT["tax-add"](); } };
   $("#s-notif").onclick = askNotif;
 
   $("#s-test").onclick = async () => {
