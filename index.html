@@ -302,6 +302,12 @@ nav button.on svg{stroke-width:2.4}
 .qbig button:active{background:var(--g100)}
 .qbig input{flex:1;min-width:0;background:transparent;border:none;text-align:center;
   font-size:25px;font-weight:900;color:var(--ink);padding:0}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+.keypad button{height:52px;border-radius:13px;background:var(--surface-2);border:1.5px solid var(--line);
+  font-size:21px;font-weight:800;color:var(--ink);display:grid;place-items:center}
+.keypad button:active{background:var(--g100);border-color:var(--g300)}
+.keypad button.del{color:var(--danger);font-size:18px}
+.keypad button.wide{grid-column:span 1}
 .chips-ed{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
 .ctag{display:inline-flex;align-items:center;gap:7px;background:var(--g100);color:var(--g800);
   border-radius:999px;padding:7px 11px;font-size:13px;font-weight:700}
@@ -458,7 +464,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "1.4.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "1.5.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -1574,27 +1580,49 @@ function addToCart(p, q){
   else CART.push({ id:p.id, name:p.name, price:p.price || 0, cost:p.cost || 0, unit:p.unit || "قطعة", qty:q });
   cartSync(); toast(`${p.name} ✓`, 1100);
 }
+/* ---- pavé numérique intégré : indépendant du clavier du téléphone ---- */
+function padHTML(id, val = "", step = 1){
+  const k = n => `<button type="button" data-pad="${id}" data-k="${n}">${n}</button>`;
+  return `<div class="qbig">
+      <button type="button" data-pad="${id}" data-k="-">−</button>
+      <input id="${id}" type="text" inputmode="decimal" dir="ltr" autocomplete="off"
+             data-step="${step}" value="${esc(String(val))}">
+      <button type="button" data-pad="${id}" data-k="+">+</button>
+    </div>
+    <div class="keypad">${[1,2,3,4,5,6,7,8,9].map(k).join("")}${k(".")}${k(0)}
+      <button type="button" class="del" data-pad="${id}" data-k="del">⌫</button></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-pad]"); if(!b) return;
+  e.preventDefault();
+  const inp = document.getElementById(b.dataset.pad); if(!inp) return;
+  const k = b.dataset.k; let v = String(inp.value || "");
+  if(k === "del")                 v = v.slice(0, -1);
+  else if(k === "+" || k === "-"){
+    const st = num(inp.dataset.step) || 1;
+    v = qtyF(Math.max(0, Math.round((num(v) + (k === "+" ? st : -st)) * 1000) / 1000));
+  }
+  else if(k === "."){ if(!v.includes(".")) v = (v || "0") + "."; }
+  else                            v = (v === "0" ? "" : v) + k;
+  inp.value = v;
+  inp.dispatchEvent(new Event("input", { bubbles:true }));
+  inp.dispatchEvent(new Event("change", { bubbles:true }));
+});
+
 function askQty(p){
   sheet(esc(p.name), `
     <div class="csub" style="color:var(--mute);font-size:12.5px;margin-bottom:12px">
       السعر ${money(p.price)} د.ت / ${esc(p.unit)} — المتوفر ${qtyF(p.qty || 0)}</div>
     <div class="field"><label>الكمية (${esc(p.unit)})</label>
-      <div class="qbig"><button type="button" data-qs="-1">−</button>
-        <input id="q-in" type="text" inputmode="decimal" value="1" dir="ltr">
-        <button type="button" data-qs="1">+</button></div></div>
+      ${padHTML("q-in", 1, /كغ|لتر|kg|L/i.test(p.unit || "") ? 0.5 : 1)}</div>
     <div class="grid3" style="margin-bottom:6px">
       ${[0.5,1,1.5,2,2.5,3].map(v => `<button class="btn line sm" data-q="${v}">${v}</button>`).join("")}</div>
     <div class="tot-row big"><span>المجموع</span><span id="q-tot">${DT(p.price)}</span></div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="q-ok">زيد للسلة</button></div>`,
   () => {
-    const inp = $("#q-in"); inp.focus(); inp.select();
+    const inp = $("#q-in");
     const upd8 = () => $("#q-tot").innerHTML = DT(num(inp.value) * (p.price || 0));
     inp.oninput = upd8;
-    const st = /كغ|لتر|kg|L/i.test(p.unit || "") ? 0.5 : 1;
-    $$("#sheet-body [data-qs]").forEach(b => b.onclick = () => {
-      inp.value = qtyF(Math.max(0, Math.round((num(inp.value) + Number(b.dataset.qs) * st) * 1000) / 1000));
-      upd8();
-    });
     $$("#sheet-body [data-q]").forEach(b => b.onclick = () => { inp.value = b.dataset.q; upd8(); });
     $("#q-ok").onclick = () => { const q = num(inp.value); if(q <= 0) return toast("الكمية لازم أكبر من 0"); closeSheet(); addToCart(p, q); };
     inp.onkeydown = e => e.key === "Enter" && $("#q-ok").click();
@@ -1865,7 +1893,7 @@ ACT["prod-qty"] = id => {
   sheet("تعديل كمية — " + esc(p.name), `
     <div class="tabs"><button class="on" data-m="add">➕ زيادة</button><button data-m="sub">➖ نقصان</button><button data-m="set">🎯 جرد</button></div>
     <div class="field"><label id="q-lb">الكمية اللي باش تزيد (${esc(p.unit)})</label>
-      <input id="q-v" class="inp" type="text" inputmode="decimal" dir="ltr" value="" style="font-size:20px;text-align:center;font-weight:800"></div>
+      ${padHTML("q-v", "", /كغ|لتر|kg|L/i.test(p.unit || "") ? 0.5 : 1)}</div>
     <div class="field"><label>السبب</label>
       <select id="q-r" class="inp"><option>وصول بضاعة</option><option>جرد / تصحيح</option><option>تالف / كسر</option><option>استهلاك ذاتي</option><option>إرجاع حريف</option><option>أخرى</option></select></div>
     <div class="hint">الكمية الحالية : <b>${qtyF(p.qty || 0)} ${esc(p.unit)}</b></div>
@@ -1877,7 +1905,6 @@ ACT["prod-qty"] = id => {
       mode = b.dataset.m;
       $("#q-lb").textContent = mode === "set" ? `الكمية الحقيقية في الرف (${p.unit})` : mode === "add" ? `الكمية اللي باش تزيد (${p.unit})` : `الكمية اللي باش تنقص (${p.unit})`;
     });
-    $("#q-v").focus();
     $("#q-save").onclick = async () => {
       const v = num($("#q-v").value); if(v <= 0 && mode !== "set") return toast("اكتب كمية");
       const delta = mode === "add" ? v : mode === "sub" ? -v : v - (p.qty || 0);
@@ -1952,14 +1979,13 @@ function cashForm(type){
   const cats = type === "out" ? S.set.expCats : ["مبيعات","خلاص حريف","إيداع","أخرى"];
   sheet(type === "out" ? "مصروف جديد" : "مدخول جديد", `
     <div class="field"><label>المبلغ (د.ت) *</label>
-      <input id="c-amt" class="inp" type="text" inputmode="decimal" dir="ltr" style="font-size:22px;text-align:center;font-weight:800" placeholder="0.000"></div>
+      ${padHTML("c-amt", "", 1)}</div>
     <div class="field"><label>النوع</label><select id="c-cat" class="inp">${cats.map(c => `<option>${esc(c)}</option>`).join("")}</select></div>
     <div class="field"><label>الوصف</label><input id="c-lab" class="inp" placeholder="مثال : خلاص فاتورة الضوء"></div>
     <div class="field"><label>التاريخ</label><input id="c-date" class="inp" type="date" dir="ltr" value="${todayKey()}"></div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button>
       <button class="btn ${type === "out" ? "dan" : ""}" id="c-ok">حفظ</button></div>`,
   () => {
-    $("#c-amt").focus();
     $("#c-ok").onclick = async () => {
       const amt = num($("#c-amt").value); if(amt <= 0) return toast("اكتب المبلغ");
       const d = $("#c-date").value || todayKey();
@@ -2108,7 +2134,7 @@ function payForm(kind, id){
     <div class="alert ${(p.balance || 0) > 0 ? "warn" : "ok"}"><div class="ic">${(p.balance || 0) > 0 ? "⚠️" : "✅"}</div>
       <div>الرصيد الحالي : <b>${money(p.balance || 0)} د.ت</b> ${(p.balance || 0) > 0 ? (isSup ? "(دين علينا)" : "(دين عليه)") : ""}</div></div>
     <div class="field"><label>المبلغ (د.ت) *</label>
-      <input id="y-amt" class="inp" type="text" inputmode="decimal" dir="ltr" value="${Math.max(0, p.balance || 0) || ""}" style="font-size:22px;text-align:center;font-weight:800"></div>
+      ${padHTML("y-amt", Math.max(0, p.balance || 0) || "", 1)}</div>
     <div class="grid2">
       <div class="field"><label>الطريقة</label><select id="y-mode" class="inp">${Object.entries(MODES).filter(([k]) => k !== "credit").map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
       <div class="field"><label>التاريخ</label><input id="y-date" class="inp" type="date" dir="ltr" value="${todayKey()}"></div>
@@ -2116,7 +2142,6 @@ function payForm(kind, id){
     <div class="field"><label>ملاحظة</label><input id="y-note" class="inp" placeholder="اختياري"></div>
     <div class="foot"><button class="btn line" data-act="close">إلغاء</button><button class="btn" id="y-ok">تسجيل الخلاص</button></div>`,
   () => {
-    $("#y-amt").focus(); $("#y-amt").select();
     $("#y-ok").onclick = async () => {
       const amt = num($("#y-amt").value); if(amt <= 0) return toast("اكتب المبلغ");
       const d = $("#y-date").value || todayKey(); closeSheet();
