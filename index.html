@@ -496,7 +496,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "2.6.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "2.7.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -3516,17 +3516,17 @@ RENDER["p-set"] = () => {
       <div class="chips-ed">${catChips(st.cats, "cats")}</div>
       <div class="addrow"><input id="add-cats" class="inp" placeholder="صنف جديد">
         <button class="btn sm" data-act="cat-add" data-id="cats">${ic("plus",15)} زيد</button></div></div>
-    <div class="field"><label>نسب الأداء %</label>
+    <div class="field"><label>أصناف المصاريف</label>
+      <div class="chips-ed">${catChips(st.expCats, "expCats")}</div>
+      <div class="addrow"><input id="add-expCats" class="inp" placeholder="صنف جديد">
+        <button class="btn sm" data-act="cat-add" data-id="expCats">${ic("plus",15)} زيد</button></div></div>
+    <div class="field" style="margin-bottom:0;margin-top:14px"><label>نسب الأداء %</label>
       <div class="chips-ed">${taxList().map((r, i) =>
         `<span class="ctag">${r}%<button data-act="tax-del" data-id="${i}">✕</button></span>`).join("")
         || `<span class="hint">لا شيء</span>`}</div>
       <div class="addrow"><input id="add-tax" class="inp" type="text" inputmode="decimal" dir="ltr" placeholder="مثال : 7">
         <button class="btn sm" data-act="tax-add">${ic("plus",15)} زيد</button></div>
       <div class="hint">هذه النسب تظهر في فيشة المنتج وفي كل سطر من الفاتورة أو عرض السعر.</div></div>
-    <div class="field" style="margin-bottom:0"><label>أصناف المصاريف</label>
-      <div class="chips-ed">${catChips(st.expCats, "expCats")}</div>
-      <div class="addrow"><input id="add-expCats" class="inp" placeholder="صنف جديد">
-        <button class="btn sm" data-act="cat-add" data-id="expCats">${ic("plus",15)} زيد</button></div></div>
   </div>
 
   <div class="card"><h3>التنبيهات</h3>

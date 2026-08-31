@@ -1,5 +1,5 @@
 /* مزرعة البركة — service worker : cache offline + notifications */
-const VERSION = "2.6.0";            /* ← bouger ce numéro à chaque mise en ligne */
+const VERSION = "2.7.0";            /* ← bouger ce numéro à chaque mise en ligne */
 const CACHE   = "mazraa-" + VERSION;
 const ASSETS  = ["./", "./index.html", "./manifest.json",
                  "./icons/icon-192.png", "./icons/icon-512.png", "./icons/favicon.png"];
