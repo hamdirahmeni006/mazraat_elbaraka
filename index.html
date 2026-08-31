@@ -496,7 +496,7 @@ const FIREBASE_CONFIG = {
 };
 /* Console Firebase > Cloud Messaging > Web Push certificates > Générer une paire de clés */
 const VAPID_KEY = "COLLE_TA_CLE_VAPID_ICI";
-const APP_VERSION = "2.5.0";           // doit être identique à VERSION dans sw.js
+const APP_VERSION = "2.6.0";           // doit être identique à VERSION dans sw.js
 
 /* ============================================================
    2) OUTILS
@@ -1254,8 +1254,10 @@ function sheet(title, body, onMount){
   onMount && onMount();
 }
 function closeSheet(){
+  const back = SHEET_CANCEL; SHEET_CANCEL = null;
   $("#sheet").classList.remove("on"); document.body.style.overflow = "";
   SHEET_H = false;
+  if(back) back();                       /* retour à la feuille d'où l'on venait */
 }
 /* bouton « retour » du téléphone : ferme la feuille, sinon revient à la page précédente */
 addEventListener("popstate", e => {
@@ -1475,7 +1477,7 @@ function buildNav(){
         ${ic(n.ic, 23)}<span>${n.main && !n.mobileOnly ? n.short : n.lb}</span></button>`).join("");
   $$("#nav button").forEach(b => b.onclick = () => go(b.dataset.go));
 }
-let SHEET_H = false;
+let SHEET_H = false, SHEET_CANCEL = null;
 function go(page, push = true){
   if(page === "p-more" && innerWidth >= 900) page = "p-sup";
   const same = S.page === page;
@@ -1519,6 +1521,7 @@ const prod = id => S.products.find(p => p.id === id);
 /* marge en % ; -1 si le prix d'achat est inconnu */
 const taxList = () => (S.set.taxRates && S.set.taxRates.length ? S.set.taxRates : [0, 7, 13, 19])
   .map(Number).filter(x => !isNaN(x)).sort((a, b) => a - b);
+const prodTax = p => Number(p?.tax ?? p?.taxSale ?? S.set.tva ?? 0) || 0;
 const taxOpts = sel => {
   const v = Number(sel) || 0, l = taxList().slice();
   if(!l.includes(v)) l.push(v);
@@ -1796,7 +1799,10 @@ function openCart(){
       if(e.target.value !== "__new") return;
       e.target.value = "";
       CART_PEND = { rem:$("#c-rem").value, mode:$("#c-mode").value, pr:$("#c-print").checked };
-      newParty("cli", (id, d) => { CART_PEND.cli = id; CART_PEND.name = d?.name || ""; openCart(); });
+      newParty("cli", (id, d) => {
+        if(id){ CART_PEND.cli = id; CART_PEND.name = d?.name || ""; }
+        openCart();
+      });
     };
     $("#cart-lines").onclick = ev => {
       const b = ev.target.closest("[data-cl]"); if(!b) return;
@@ -2057,10 +2063,7 @@ function prodForm(p, forceNew){
       <div class="field"><label>سعر الشراء</label><input id="f-cost" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.cost || 0}"></div>
       <div class="field"><label>سعر البيع *</label><input id="f-price" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.price || 0}"></div>
     </div>
-    <div class="grid2">
-      <div class="field"><label>أداء البيع %</label><select id="f-txs" class="inp">${taxOpts(p.taxSale ?? S.set.tva)}</select></div>
-      <div class="field"><label>أداء الشراء %</label><select id="f-txb" class="inp">${taxOpts(p.taxBuy ?? S.set.tva)}</select></div>
-    </div>
+    <div class="field"><label>الأداء %</label><select id="f-tax" class="inp">${taxOpts(prodTax(p))}</select></div>
     <div class="grid2">
       <div class="field"><label>الكمية الحالية</label><input id="f-qty" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.qty || 0}" ${isNew ? "" : "readonly style=background:#EFF2EE"}></div>
       <div class="field"><label>حد التنبيه</label><input id="f-min" class="inp" type="text" inputmode="decimal" dir="ltr" value="${p.min ?? S.set.lowStock}"></div>
@@ -2084,7 +2087,7 @@ function prodForm(p, forceNew){
     $("#f-imgpick").onclick = () => pickImage(d => { IMG = d; paint(); });
     const draft = () => ({ ...p, name:$("#f-name").value, nameFr:$("#f-namefr").value, img:IMG,
       cat:$("#f-cat").value, unit:$("#f-unit").value, cost:num($("#f-cost").value),
-      taxSale:num($("#f-txs").value), taxBuy:num($("#f-txb").value),
+      tax:num($("#f-tax").value),
       price:num($("#f-price").value), qty:num($("#f-qty").value), min:num($("#f-min").value),
       dlc:$("#f-dlc").value, supplierId:$("#f-sup").value, code:$("#f-code").value });
     $("#f-scan").onclick = () => scanCode(c => {
@@ -2098,7 +2101,10 @@ function prodForm(p, forceNew){
       if(e.target.value !== "__new") return;
       e.target.value = p.supplierId || "";
       const d = draft();
-      newParty("sup", (id, nd) => { prodForm({ ...d, supplierId:id }, isNew); ensureOpt($("#f-sup"), id, nd?.name); });
+      newParty("sup", (id, nd) => {
+        prodForm({ ...d, supplierId: id || d.supplierId || "" }, isNew);
+        if(id) ensureOpt($("#f-sup"), id, nd?.name);
+      });
     };
     $("#f-imgdel").onclick  = () => { IMG = ""; paint(); };
     $("#f-ok").onclick = async () => {
@@ -2106,7 +2112,7 @@ function prodForm(p, forceNew){
         name: $("#f-name").value.trim(), nameFr: $("#f-namefr").value.trim(), img: IMG,
         cat: $("#f-cat").value, unit: $("#f-unit").value,
         cost: num($("#f-cost").value), price: num($("#f-price").value),
-        taxSale: num($("#f-txs").value), taxBuy: num($("#f-txb").value),
+        tax: num($("#f-tax").value),
         min: num($("#f-min").value), dlc: $("#f-dlc").value || "",
         supplierId: $("#f-sup").value, code: $("#f-code").value.trim()
       };
@@ -2554,6 +2560,7 @@ function partyForm(kind, p, after){
       const d = { name:$("#p-name").value.trim(), phone:$("#p-tel").value.trim(), addr:$("#p-addr").value.trim(),
                   mf:$("#p-mf").value.trim(), note:$("#p-note").value.trim() };
       if(!d.name) return toast("الاسم ضروري");
+      SHEET_CANCEL = null;               /* enregistrement : pas d'annulation */
       closeSheet();
       const c = kind === "sup" ? "suppliers" : "clients";
       let nid = p.id || "";
@@ -2566,7 +2573,12 @@ function partyForm(kind, p, after){
 ACT["sup-new"] = () => partyForm("sup");
 const newClient = after => partyForm("cli", null, after);
 /* « ➕ nouveau » dans n'importe quelle liste : ouvre la fiche puis revient */
-function newParty(kind, back){ closeSheet(); partyForm(kind, null, (id, d) => back(id, d)); }
+function newParty(kind, back){
+  closeSheet();
+  let done = false;
+  partyForm(kind, null, (id, d) => { done = true; back(id, d); });
+  SHEET_CANCEL = () => { if(!done){ done = true; back("", null); } };
+}
 /* garantit que l'option existe même si la synchro n'a pas encore renvoyé la fiche */
 function ensureOpt(sel, id, label){
   if(!sel || !id) return;
@@ -2725,7 +2737,11 @@ function buySheet(){
       if(e.target.value === "__new"){
         e.target.value = BUY.supplierId || "";
         BUY.paid = num($("#b-paid").value); BUY.date = $("#b-date").value || BUY.date;
-        newParty("sup", (id, d) => { BUY.supplierId = id; buySheet(); ensureOpt($("#b-sup"), id, d?.name); });
+        newParty("sup", (id, d) => {
+          if(id) BUY.supplierId = id;
+          buySheet();
+          if(id) ensureOpt($("#b-sup"), id, d?.name);
+        });
         return;
       }
       BUY.supplierId = e.target.value;
@@ -3112,10 +3128,12 @@ function docForm(type, existing, keep){
         e.target.value = DOC.clientId || "";
         snap();
         newParty("cli", (id, d) => {
-          DOC.clientId = id;
-          DOC.client = { name:d?.name || "", addr:d?.addr || "", mf:d?.mf || "", phone:d?.phone || "" };
+          if(id && d){
+            DOC.clientId = id;
+            DOC.client = { name:d.name || "", addr:d.addr || "", mf:d.mf || "", phone:d.phone || "" };
+          }
           docForm(type, existing, true);
-          ensureOpt($("#d-cli"), id, d?.name);
+          if(id) ensureOpt($("#d-cli"), id, d?.name);
         });
         return;
       }
@@ -3127,7 +3145,7 @@ function docForm(type, existing, keep){
     const addProd = p => {                       /* une ligne par produit : on cumule */
       const ex = DOC.items.find(i => i.pid === p.id);
       if(ex) ex.qty = Math.round(((ex.qty || 0) + 1) * 1000) / 1000;
-      else DOC.items.push({ d:pn(p), pid:p.id, qty:1, pu:p.price || 0, tax:p.taxSale ?? S.set.tva });
+      else DOC.items.push({ d:pn(p), pid:p.id, qty:1, pu:p.price || 0, tax:prodTax(p) });
     };
     $("#d-addp").onclick = () => {
       snap();                                    /* la saisie en cours est conservée */
